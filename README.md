@@ -9,7 +9,7 @@
 
 </center>
 
-1. [Idea General](#div-classheader1⚔-idea-generaldiv)
+1. [Idea General](#div-classheader1-idea-generaldiv)
 
 2. [Mundo Simulado](#div-classheader1⚔-mundo-simuladodiv)
 
@@ -17,7 +17,7 @@
 
 4. [Resumiendo y formalizando](#div-classheader1⚔-resumiendo-y-formalizandodiv)
 
-## <div class="header1"><center>⚔ Idea General</center></div>
+## <div class="header1">⚔ Idea General</div>
 
 <div class="text1">
 
@@ -27,7 +27,7 @@
 
 </div>
 
-## <div class="header1"><center>⚔ Mundo Simulado</center></div>
+## <div class="header1">⚔ Mundo Simulado</div>
 
 <div class="text1">
   
@@ -54,7 +54,7 @@
 
 </div>
 
-## <div class="header1"><center>⚔ Unidades de ejercito</center></div>
+## <div class="header1">⚔ Unidades de ejercito</div>
 
 <div class="text1">
 
@@ -86,7 +86,7 @@
 
 </div>
 
-## <div class="header1"><center>⚔ Resumiendo y formalizando</center></div>
+## <div class="header1">⚔ Resumiendo y formalizando</div>
 
 <div class="text1">
 
