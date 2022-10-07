@@ -1,0 +1,17 @@
+.header1
+{
+    padding: 5px;
+    color: white;
+    font-size: 25px;
+    text-align: center;
+    border-radius: 8px;
+    background-color: #a10020;
+    /* background-color: #c01085; */
+}
+.text1
+{
+    margin: 0%;
+    font-size: 16px;
+    text-align: justify;
+    font-family: 'Harrington', 'Sitka Small', Arial, sans-serif;
+}

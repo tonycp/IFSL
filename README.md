@@ -1,28 +1,9 @@
-<style>
-    .header1
-    {
-        padding: 5px;
-        color: white;
-        font-size: 25px;
-        text-align: center;
-        border-radius: 8px;
-        background-color: #a10020;
-        /* background-color: #c01085; */
-    }
-    .text1
-    {
-        margin: 0%;
-        font-size: 16px;
-        text-align: justify;
-        font-family: 'Harrington', 'Sitka Small', Arial, sans-serif;
-    }
-</style>
-
+<link rel="stylesheet" href="custome/style.css">
 <center>
 
 # ⚔ Intelligent Formation Simulation Language (IFSL) ⚔
 
-![](img/RomanosvsCeltas.jpg)
+![](custome/RomanosvsCeltas.jpg)
 
 ## Indice:
 
