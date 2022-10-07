@@ -19,7 +19,7 @@
 
 ## <div class="header1">⚔ Idea General</div>
 
-<div class="text1">
+<div class="text1" style="text-align: justify;">
 
 &nbsp; Este proyecto tiene como objetivo principal tratar de aplicar los conocimientos de IA, Compilación y Simulación en la creación de un lenguaje capaz de facilitar la programación de formaciónes con fines competitivos. Para ello dividiremos el proyecto en 3 secciones en correspondencia con cada una de las asignaturas con sus propios objetivos a seguir y dependientes de las demás. El lenguaje que se utilizará tendrá un enfoque recursivo para facilitar su entendimiento y poder crear con mayor naturalidad los escenarios sin tener conocimientos previos de programación.
 
