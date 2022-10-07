@@ -17,9 +17,9 @@
 
 4. [Resumiendo y formalizando](#div-classheader1⚔-resumiendo-y-formalizandodiv)
 
-## <div class="header1">⚔ Idea General</div>
+## <div class="header1"><center>⚔ Idea General</center></div>
 
-<div class="text1" style="text-align: justify;">
+<div class="text1">
 
 &nbsp; Este proyecto tiene como objetivo principal tratar de aplicar los conocimientos de IA, Compilación y Simulación en la creación de un lenguaje capaz de facilitar la programación de formaciónes con fines competitivos. Para ello dividiremos el proyecto en 3 secciones en correspondencia con cada una de las asignaturas con sus propios objetivos a seguir y dependientes de las demás. El lenguaje que se utilizará tendrá un enfoque recursivo para facilitar su entendimiento y poder crear con mayor naturalidad los escenarios sin tener conocimientos previos de programación.
 
@@ -27,7 +27,7 @@
 
 </div>
 
-## <div class="header1">⚔ Mundo Simulado</div>
+## <div class="header1"><center>⚔ Mundo Simulado</center></div>
 
 <div class="text1">
   
@@ -54,7 +54,7 @@
 
 </div>
 
-## <div class="header1">⚔ Unidades de ejercito</div>
+## <div class="header1"><center>⚔ Unidades de ejercito</center></div>
 
 <div class="text1">
 
@@ -86,7 +86,7 @@
 
 </div>
 
-## <div class="header1">⚔ Resumiendo y formalizando</div>
+## <div class="header1"><center>⚔ Resumiendo y formalizando</center></div>
 
 <div class="text1">
 
