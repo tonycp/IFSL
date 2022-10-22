@@ -9,9 +9,9 @@
 *.user
 *.userosscache
 *.sln.docstates
-old_readme.md
-Formations.md
-info.md
+ifsl-dsl
+olds_readmes
+ideas.md
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
