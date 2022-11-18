@@ -3,8 +3,9 @@ import pygame
 from typing import Iterable
 from _grid import get_grid
 
+
 class Render:
-    def __init__(self, height: int=600, width: int=800) -> None:
+    def __init__(self, height: int = 600, width: int = 800) -> None:
         """
         inicializador de clase, crea un screen de dimensiones (width, height)
 
@@ -16,6 +17,8 @@ class Render:
     def __iter__(self) -> Iterable:
         """
         iterador que recorre la simulación después de que pygame haya iniciado
+
+        return -> Iterable(States)
         """
         raise StopIteration("not implemented")
 
@@ -34,6 +37,8 @@ class Render:
     def update(self) -> bool:
         """
         update se encarga de actualizar la imagen que se muestra en el screen de pygame
+
+        return -> bool
         """
         #################################
         #      GET STATE CODE HERE      #
@@ -44,4 +49,4 @@ class Render:
         """
         clean limpia toda la imagen que se muestra en el screen de pygame
         """
-        self.__screen.fill(self.background)
+        self.__screen.fill((0, 0, 0))
