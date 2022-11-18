@@ -1,5 +1,6 @@
 import sys
 import pygame
+from typing import Iterable
 from _grid import get_grid
 
 class Render:
@@ -12,15 +13,15 @@ class Render:
         self.__screen = pygame.display.set_mode(size=(width, height))
         self.background = get_grid(height, width)
 
-    def clean(self):
+    def __iter__(self) -> Iterable:
         """
-        clean limpia toda la imagen que se muestra en el screen de pygame
+        iterador que recorre la simulación después de que pygame haya iniciado
         """
-        self.__screen.fill(self.background)
+        raise StopIteration("not implemented")
 
     def start(self, condition) -> None:
         """
-        start se encarga de empezar la simulación despues de que pygame haya iniciado
+        start se encarga de empezar la simulación después de que pygame haya iniciado
 
         condition -> condición de parada de la simulación
         """
@@ -28,9 +29,19 @@ class Render:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     sys.exit()
-            #################################
-            #      GET STATE CODE HERE      #
-            #################################
-            self.clean()
-            self.__screen.blit(ball, ballrect)
-            pygame.display.flip()
+            self.update()
+
+    def update(self) -> bool:
+        """
+        update se encarga de actualizar la imagen que se muestra en el screen de pygame
+        """
+        #################################
+        #      GET STATE CODE HERE      #
+        #################################
+        return False
+
+    def clean(self) -> None:
+        """
+        clean limpia toda la imagen que se muestra en el screen de pygame
+        """
+        self.__screen.fill(self.background)
