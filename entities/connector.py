@@ -1,0 +1,50 @@
+from ._units import Unit
+
+class Connector:
+    __id = 0
+    def __init__(self, unit:Unit, possition, functions:list[function]) -> None:
+        self.unit = unit 
+        self.__current_hp= unit.GetHealthPoints()
+        self.__current_possition = possition
+        __id +=1
+        self.__id = __id
+        for func in functions:
+            self.__dict__[f'__{func.__name__}'] = func
+        
+    def update_possition(self,new_possition):
+        self.__current_possition = new_possition
+    
+    def update_health_points(self, new_hp):
+        self.__current_hp = new_hp
+    
+    def get_health_points(self):
+        return self.__current_hp
+        
+    def touch(self, action_name, **params):
+        if self.is_connected() and self.__dict__[action_name](params):
+            return self.__touch(self,action_name,params)
+    
+    def is_connected(self):
+        return self.__current_hp <= 0 
+    
+    
+
+class State:
+    
+    def create_connector(self):
+        return Connector()
+    
+    def move(self):
+        pass
+
+    
+    def swap(self):
+        pass
+    
+    
+    def attack(self):
+        pass
+    
+        
+    
+    
