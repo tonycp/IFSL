@@ -12,6 +12,8 @@
 ifsl-dsl
 olds_readmes
 ideas.md
+.vscode
+tester.py
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
