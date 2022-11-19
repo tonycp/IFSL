@@ -1,6 +1,6 @@
 from ._units import Unit
 
-class State:
+class StateMannager:
     class Connector:
         __id = 0
         def __init__(self, unit:Unit, possition, functions:list[function]) -> None:
@@ -10,7 +10,7 @@ class State:
             __id +=1
             self.__id = __id
             for func in functions:
-                self.__dict__[f'__{func.__name__}'] = func
+                self.__dict__[func.__name__] = func
 
         def __update_possition(self,new_possition):
             self.__current_possition = new_possition
@@ -24,15 +24,22 @@ class State:
         def get_health_points(self):
             return self.__current_hp
 
-        def touch(self, action_name, **params):
-            return self.is_connected() and self.__dict__[action_name](params)
-               
-
         def is_connected(self):
             return self.__current_hp <= 0 
     
+    def __init__(self, map, agents_units_possitions):
+        self.map = map
+        self.connectors = []
+        for ag, units in agents_units_possitions:
+            for unit,possition in units:
+                connector = self.create_connector(unit,possition)
+                ag.Connect(connector)
+                self.connectors.append(ag,connector)
+        
+                
+    
     def create_connector(self,unit:Unit,possition):
-        return self.Connector(unit,possition,[self.move,self.swap,self.attack,self.touch])
+        return self.Connector(unit,possition,[self.move,self.swap,self.attack])
     
     def move(self):
         pass
@@ -43,8 +50,7 @@ class State:
     def attack(self):
         pass
     
-    def touch(self):
-        pass
+
     
 
      
