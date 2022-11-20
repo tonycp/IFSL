@@ -43,16 +43,15 @@ class StateMannager:
                 
     
     def create_connector(self,unit:Unit,possition):
-        return self.Connector(unit,possition,[self.move,self.swap,self.attack])
+        return self.Connector(unit,possition,[self.move_notifier,self.swap_notifier,self.attack_notifier])
     
-    def move(self,connector,direction):
-        
+    def move_notifier(self,connector,direction):
         pass
 
-    def swap(self,connector,direction):
+    def swap_notifier(self,connector,direction):
         pass
         
-    def attack(self,connector,pos_x,pos_y):
+    def attack_notifier(self,connector,pos_x,pos_y):
         pass
     
 
