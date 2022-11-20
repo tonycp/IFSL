@@ -33,7 +33,7 @@ class StateMannager:
         for ag, units in agents_units_possitions:
             for unit,possition in units:
                 connector = self.create_connector(unit,possition)
-                ag.Connect(connector)
+                ag.connect(connector)
                 self.connectors.append(ag,connector)
         
                 
