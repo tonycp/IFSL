@@ -1,3 +1,10 @@
+class Singleton:
+    instance = None
+    def __new__(cls,*args, **kwargs):
+        if not isinstance(cls.instance,cls):
+            cls.instance = object.__new__(cls)
+        return cls.instance
+
 class Unit:
     def __init__(self, attack_range, damage, vision_radio, health_points, move_cost) -> None:
         self.__attack_range = attack_range
@@ -26,10 +33,7 @@ class Unit:
     def GetMoveCost(self):
         return self.__move_cost
     
- 
-    
-class Fighter(Unit):
-    
+class Fighter(Singleton,Unit):
     def __init__(self):
         super().__init__(1,100,5,1000,6)
         
@@ -37,7 +41,7 @@ class Fighter(Unit):
     def weakness(self, other):
         return True if other is Archer or other is Knight else False
 
-class Archer(Unit):
+class Archer(Singleton,Unit):
 
     def __init__(self):
         super().__init__(15,50,20,1000,3)
@@ -46,8 +50,7 @@ class Archer(Unit):
     def weakness(self, other):
         return True if other is Unit else False
 
-class Knight(Unit):
-
+class Knight(Singleton,Unit):
     def __init__(self):
         super().__init__(1,200,10,1000,1)
         
@@ -55,7 +58,7 @@ class Knight(Unit):
     def weakness(self, other):
         return True if other is Pikeman else False
 
-class Pikeman(Unit):
+class Pikeman(Singleton,Unit):
 
     def __init__(self):
         super().__init__(2,50,5,1000,6)
@@ -64,7 +67,7 @@ class Pikeman(Unit):
     def weakness(self, other):
         return True if other is Archer or other is Fighter else False
 
-class Explorer(Unit):
+class Explorer(Singleton,Unit):
 
     def __init__(self):
         super().__init__(1,20,25,1000,2)

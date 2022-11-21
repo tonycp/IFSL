@@ -1,4 +1,8 @@
 from ._units import Unit
+from enum import Enum
+
+DIRECTIONS = Enum('DIRECTIONS', 'N NE E SE S SW W NW')
+
 
 class StateMannager:
     class Connector:
@@ -39,15 +43,15 @@ class StateMannager:
                 
     
     def create_connector(self,unit:Unit,possition):
-        return self.Connector(unit,possition,[self.move,self.swap,self.attack])
+        return self.Connector(unit,possition,[self.move_notifier,self.swap_notifier,self.attack_notifier])
     
-    def move(self):
+    def move_notifier(self,connector,direction):
         pass
 
-    def swap(self):
+    def swap_notifier(self,connector,direction):
         pass
         
-    def attack(self):
+    def attack_notifier(self,connector,pos_x,pos_y):
         pass
     
 
