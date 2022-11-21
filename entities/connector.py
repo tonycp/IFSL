@@ -3,16 +3,20 @@ from enum import Enum
 
 DIRECTIONS = Enum('DIRECTIONS', 'N NE E SE S SW W NW')
 
+STATES = Enum('STATES','Walking Swaping Attacking Stand')
 
 class StateMannager:
     class Connector:
         __id = 0
         def __init__(self, unit:Unit, possition, functions:list[function]) -> None:
             self.unit = unit 
-            self.__current_hp= unit.GetHealthPoints()
+            self.__current_hp = unit.GetHealthPoints
             self.__current_possition = possition
-            __id +=1
-            self.__id = __id
+            StateMannager.Connector.__id += 1
+            self.state = STATES.Stand
+            self.timer = 0
+            self.time_to_wait = 0
+            self.__id = StateMannager.Connector.__id
             for func in functions:
                 self.__dict__[func.__name__] = func
 
@@ -25,6 +29,8 @@ class StateMannager:
                 return True
             return False
 
+        
+
         def get_health_points(self):
             return self.__current_hp
 
@@ -33,17 +39,25 @@ class StateMannager:
     
     def __init__(self, map, agents_units_possitions):
         self.map = map
-        self.connectors = []
+        self.agents = []
+        self.move_notifications = []
+        self.swap_notifications = []
+        self.attack_notifications = []
         for ag, units in agents_units_possitions:
+            self.agents.append(ag)
             for unit,possition in units:
                 connector = self.create_connector(unit,possition)
                 ag.Connect(connector)
-                self.connectors.append(ag,connector)
+                
         
                 
-    
     def create_connector(self,unit:Unit,possition):
-        return self.Connector(unit,possition,[self.move_notifier,self.swap_notifier,self.attack_notifier])
+        return StateMannager.Connector(unit,possition,[self.move_notifier,self.swap_notifier,self.attack_notifier])
+
+    def exec_round():
+        # Pedir acciones a cada una de las IAs
+        # Ejecutar las acciones
+        pass
     
     def move_notifier(self,connector,direction):
         pass
