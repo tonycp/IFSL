@@ -6,7 +6,7 @@ Y_DIR = [1,1,0,-1,-1,-1,0,1]
 
 DIRECTIONS = Enum('DIRECTIONS','N NE E SE S SW W NW')
 
-STATES = Enum('STATES','Walking Swaping Attacking Stand')
+STATES = Enum('STATES','Moving Swaping Attacking Stand')
 
 def direction_to_int(direction):
     if direction == DIRECTIONS.N:
@@ -69,6 +69,7 @@ class StateMannager:
         self.move_notifications = []
         self.swap_notifications = []
         self.attack_notifications = []
+        self.current_log = []
         for ag, units in agents_units_possitions:
             self.agents.append(ag)
             for unit,possition in units:
@@ -86,19 +87,31 @@ class StateMannager:
             # Calcular vision para este agente
             agent.decide()
         # Ejecutar las acciones
-        log = self.exec_actions()
+        log = self.__exec_actions()
         return log
         pass
 
-    def exec_actions(self):
+    def __exec_actions(self):
         # Ejecutar los movimientos
-        #   * utilizar la idea de la frontera y cosas de conjunto para actualizar la vista
-        #   * la vista consiste:
+        #   * Utilizar la idea de la frontera y cosas de conjunto para actualizar la vista
+        #        * la vista consiste:
         #        * las posiciones, vida actual, agente al que pertenece y stats 
         #        * de los soldados enemigos que se encuentran dentro de la union del area visible de todos los soldados de ese agente
+        #   * Casos con move:
+        #        * Estás en estado
+        #           * 
+        for mov in self.move_notifications:
+            actor = mov[0]
+            num_dir = mov[1]
+            if not actor.state == STATES.Moving:
+                if actor.unit.GetMoveCost == 1:
+                    pass        
         # Ejecutar los ataques
         pass
     
+    def __move(self,connector,num_dir):
+        
+
     def move_notifier(self,connector,direction):
         num_direction = direction_to_int(direction)
         x, y = connector.get_position()
