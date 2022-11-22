@@ -1,9 +1,7 @@
 import sys, os
 sys.path.append(os.path.abspath('.'))
 from entities._units import Fighter
+from enum import Enum
 
-class test:
-    __id = 0
-    def __init__(self):
-        test.__id += 1
-        self.id = test.__id
+item = Fighter()
+print(item.GetAttackRange)
