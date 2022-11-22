@@ -1,10 +1,10 @@
 import sys
-import pygame as pg
-from pygame.surface import Surface
 import numpy as np
+import pygame as pg
 from entities import Celd
 from typing import Iterable
-from ._grid import get_grid, get_color
+from ._grid import get_grid, get_sprint, transform
+
 
 class Render:
     def __init__(self, condition, last_state: np.matrix = None, width: int = 800, height: int = 600) -> None:
@@ -17,7 +17,8 @@ class Render:
         self.__screen = pg.display.set_mode(size=(width, height))
         self.last_state = get_grid(
             width, height) if last_state is None else last_state
-        self.__scale = self.__screen.get_size()[0] / self.last_state.shape[1], self.__screen.get_size()[1] / self.last_state.shape[0]
+        self.__scale = int(self.__screen.get_size()[0] / self.last_state.shape[1]) + 1, int(
+            self.__screen.get_size()[1] / self.last_state.shape[0]) + 1
         self.update(last_state.A1)
 
     def __iter__(self) -> Iterable[list[Celd]]:
@@ -35,17 +36,16 @@ class Render:
             #################################
             yield self.last_state.A1  # new state
 
-    def start(self) -> None:
+    def start(self, time: int = 60) -> None:
         """
         start se encarga de recorrer la simulación hasta el final después de que pygame haya iniciado
 
         condition -> condición de parada de la simulación
         """
+        clock = pg.time.Clock()
         for i in self:
             self.update(i)
-
-    def blits(self, state: list[Celd]) -> None:
-        return self.__screen.blits([(get_color(i), i.location) for i in state])
+            clock.tick(time)
 
     def update(self, state: list[Celd]) -> bool:
         """
@@ -54,12 +54,10 @@ class Render:
         return -> bool
         """
         for celd in state:
-            sprint = Surface(self.__scale)
-            sprint.fill(get_color(celd))
-            pos = celd.location[0] * self.__scale[0], celd.location[1] * self.__scale[1]
-            sprint_rect = sprint.get_rect().move(pos)
+            sprint = get_sprint(self.__scale, celd)
+            pos = transform(sprint, self.__scale, celd.location)
             try:
-                self.__screen.blit(sprint, sprint_rect)
+                self.__screen.blit(sprint, pos)
             except:
                 return False
         pg.display.update()
