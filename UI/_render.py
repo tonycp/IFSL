@@ -1,35 +1,39 @@
 import sys
-import pygame
-from _grid import get_grid
+import pygame as pg
+from pygame.surface import Surface
 import numpy as np
+from entities import Celd
 from typing import Iterable
-
+from ._grid import get_grid, get_color
 
 class Render:
-    def __init__(self, condition, last_state: np.matrix = None, height: int = 600, width: int = 800) -> None:
+    def __init__(self, condition, last_state: np.matrix = None, width: int = 800, height: int = 600) -> None:
         """
         inicializador de clase, crea un screen de dimensiones (width, height)
 
         height -> alto del screen, width -> ancho del screen
         """
         self.condition = condition
-        self.__screen = pygame.display.set_mode(size=(width, height))
-        self.last_state = get_grid(height, width) if last_state is None else last_state
+        self.__screen = pg.display.set_mode(size=(width, height))
+        self.last_state = get_grid(
+            width, height) if last_state is None else last_state
+        self.__scale = self.__screen.get_size()[0] / self.last_state.shape[1], self.__screen.get_size()[1] / self.last_state.shape[0]
+        self.update(last_state.A1)
 
-    def __iter__(self) -> Iterable:
+    def __iter__(self) -> Iterable[list[Celd]]:
         """
         iterador que recorre la simulación después de que pygame haya iniciado
 
         return -> Iterable(States)
         """
         while self.condition:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
                     sys.exit()
             #################################
             #      GET STATE CODE HERE      #
             #################################
-            yield self.last_state # new state
+            yield self.last_state.A1  # new state
 
     def start(self) -> None:
         """
@@ -40,17 +44,26 @@ class Render:
         for i in self:
             self.update(i)
 
-    def update(self, state: np.matrix) -> bool:
+    def blits(self, state: list[Celd]) -> None:
+        return self.__screen.blits([(get_color(i), i.location) for i in state])
+
+    def update(self, state: list[Celd]) -> bool:
         """
         update se encarga de actualizar la imagen que se muestra en el screen de pygame
 
         return -> bool
         """
-        # for item1, item2 in zip(self.last_state, state):
-        #     for value1, value2 in zip(item1, item2):
-        #         if(value1 is not value2):
-        #             #change frame
-        return False
+        for celd in state:
+            sprint = Surface(self.__scale)
+            sprint.fill(get_color(celd))
+            pos = celd.location[0] * self.__scale[0], celd.location[1] * self.__scale[1]
+            sprint_rect = sprint.get_rect().move(pos)
+            try:
+                self.__screen.blit(sprint, sprint_rect)
+            except:
+                return False
+        pg.display.update()
+        return True
 
     def clean(self) -> None:
         """
