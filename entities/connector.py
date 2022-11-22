@@ -26,6 +26,9 @@ def direction_to_int(direction):
     elif direction == DIRECTIONS.NW:
         return 7
 
+def discrete_distance(x_0,y_0,x_1,y_1):
+    pass
+
 class StateMannager:
     class Connector:
         __id = 0
@@ -88,6 +91,12 @@ class StateMannager:
         pass
 
     def exec_actions(self):
+        # Ejecutar los movimientos
+        #   * utilizar la idea de la frontera y cosas de conjunto para actualizar la vista
+        #   * la vista consiste:
+        #        * las posiciones, vida actual, agente al que pertenece y stats 
+        #        * de los soldados enemigos que se encuentran dentro de la union del area visible de todos los soldados de ese agente
+        # Ejecutar los ataques
         pass
     
     def move_notifier(self,connector,direction):
@@ -99,10 +108,14 @@ class StateMannager:
     def swap_notifier(self,connector,direction):
         num_direction = direction_to_int(direction)
         x, y = connector.get_position()
-        if self.map[x + X_DIR[num_direction] , y + Y_DIR[num_direction]].crossable:
+        other_connector = self.map[x + X_DIR[num_direction] , y + Y_DIR[num_direction]].get_connector()
+        if (not other_connector == None) and other_connector.agent == connector.agent:
+            self.swap_notifications.append((connector,num_direction))
         
     def attack_notifier(self,connector,pos_x,pos_y):
-        pass
+        x, y = connector.get_pos()
+        if(discrete_distance(x,y,pos_x,pos_y) <= connector.get_attack_range):
+            self.attack_notifications.append((connector,pos_x,pos_y))
     
 
     
