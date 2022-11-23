@@ -13,17 +13,32 @@ default = {
 }
 
 def paint_empty_celd(i: int, j: int) -> Celd:
+    """
+    dada una posición i, j crea una celda cualquiera
+
+    i y j -> índices o posiciones de la celda en el grid
+
+    return -> Celd
+    """
     return Celd((i, j))
 
 
 class Singleton(object):
+    """
+    clase usada para que todas las intancias hagan referencia al mismo objeto
+
+    __instance -> unica instancia de la clase
+    """
     def __new__(cls, *args, **kwargs):
-        if not hasattr(cls, 'instance'):
-            cls.instance = super().__new__(cls, *args, **kwargs)
-        return cls.instance
+        if not hasattr(cls, '__instance'):
+            cls.__instance = super().__new__(cls, *args, **kwargs)
+        return cls.__instance
 
 
 class SprintSurface(Surface):
+    """
+    clase que representa un sprint de una superficie a pintar
+    """
     def __new__(cls, source: Union[Color, Surface], *args, **kwargs) -> None:
         return Surface.__new__(cls, *args, **kwargs)
 
@@ -67,7 +82,11 @@ class GrassSurface(Singleton, SprintSurface):
 
 def get_sprint(scale: tuple[int, int], celd: Celd, source: Union[Color, Surface] = None) -> Surface:
     """
-    Dado un tipo de celda retorna su representante en sprint
+    dado un tipo de celda retorna su representante en sprint
+
+    scale -> escala del screen,
+    celd -> celda a convertir en sprint,
+    source -> representación de la celda
 
     return -> Surface
     """
@@ -89,16 +108,35 @@ def get_sprint(scale: tuple[int, int], celd: Celd, source: Union[Color, Surface]
         return SprintSurface(source, scale)
 
 
-def transform(sprint: Surface, scale: tuple[int, int], location: tuple[int, int]) -> Rect:
-    return sprint.get_rect().move(location[0] * scale[0], location[1] * scale[1])
+def transform( sprint: Surface, 
+               scale: tuple[int, int], 
+               location: tuple[int, int], 
+               shape_correction: tuple[float, float] = (0, 0),
+               scale_correction: tuple[float, float] = (0, 0)
+               ) -> Rect:
+    """
+    traslada un Surface a una posición escalada para su representación en el screen de pygame
+
+    sprint -> superficie a mover,
+    scale -> escala del screen,
+    location -> posición relativa del sprint,
+    shape_correction -> corrección relativa a la posición,
+    scale_correction -> corrección relativa al screen
+
+    return -> Rect
+    """
+    return sprint.get_rect().move((location[1] + shape_correction[1]) * scale[0] + scale_correction[0], 
+                                  (location[0] + shape_correction[0]) * scale[1] + scale_correction[1])
 
 
 def get_grid(width: int, height: int, paint=paint_empty_celd) -> np.matrix:
     """
     Crea una grilla a partir de las dimensiones que se pasan en el método
 
-    height -> alto del grid, width -> ancho del grid, paint -> función que determina que celda va en x y
+    height -> alto del grid, 
+    width -> ancho del grid, 
+    paint -> función que determina que celda va en x y
 
     return -> np.matrix
     """
-    return np.matrix([[paint(i, j) for i in range(width)] for j in range(height)], copy=False)
+    return np.matrix([[paint(i, j) for j in range(width)] for i in range(height)], copy=False)

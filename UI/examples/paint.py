@@ -18,4 +18,4 @@ def paint_example_celd(i: int, j: int, value) -> Celd:
 
 
 def get_example_grid(example) -> np.matrix:
-    return np.matrix([[paint_example_celd(i, j, example[j][i]) for i in range(len(line))] for line, j in zip(example, range(len(example)))], copy=False)
+    return np.matrix([[paint_example_celd(i, j, example[i][j]) for j in range(len(line))] for line, i in zip(example, range(len(example)))], copy=False)
