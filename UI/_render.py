@@ -11,21 +11,31 @@ class Render:
         """
         inicializador de clase, crea un screen de dimensiones (width, height)
 
-        height -> alto del screen, width -> ancho del screen
+        condition -> condición de parada,
+        last_state -> estado inicial,
+        height -> alto del screen, 
+        width -> ancho del screen
         """
         self.condition = condition
         self.__screen = pg.display.set_mode(size=(width, height))
         self.last_state = get_grid(
             width, height) if last_state is None else last_state
-        self.__scale = int(self.__screen.get_size()[0] / self.last_state.shape[1]) + 1, int(
-            self.__screen.get_size()[1] / self.last_state.shape[0]) + 1
+
+        self.__shape = self.last_state.shape
+        self.__max_shape_size = max(self.__shape[1], self.__shape[0])
+        self.__min_screen_size = min(self.__screen.get_size()[0], self.__screen.get_size()[1])
+
+        self.__shape_correction = (self.__max_shape_size - self.__shape[0]) / 2 , (self.__max_shape_size - self.__shape[1]) / 2
+        self.__screan_correction = (self.__screen.get_size()[0] - self.__min_screen_size) / 2 , (self.__screen.get_size()[1] - self.__min_screen_size) / 2
+        
+        self.__scale = int(self.__min_screen_size / self.__max_shape_size) + 1, int(self.__min_screen_size / self.__max_shape_size) + 1
         self.update(last_state.A1)
 
     def __iter__(self) -> Iterable[list[Celd]]:
         """
         iterador que recorre la simulación después de que pygame haya iniciado
 
-        return -> Iterable(States)
+        return -> Iterable[list[Celd]]
         """
         while self.condition:
             for event in pg.event.get():
@@ -40,7 +50,7 @@ class Render:
         """
         start se encarga de recorrer la simulación hasta el final después de que pygame haya iniciado
 
-        condition -> condición de parada de la simulación
+        time -> cantidad de frames por segundo
         """
         clock = pg.time.Clock()
         for i in self:
@@ -55,7 +65,7 @@ class Render:
         """
         for celd in state:
             sprint = get_sprint(self.__scale, celd)
-            pos = transform(sprint, self.__scale, celd.location)
+            pos = transform(sprint, self.__scale, celd.location, self.__shape_correction, self.__screan_correction)
             try:
                 self.__screen.blit(sprint, pos)
             except:
