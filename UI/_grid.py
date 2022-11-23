@@ -3,6 +3,7 @@ import numpy as np
 from pygame import Rect, Surface, Color
 from entities import Celd, MountainCeld, RiverCeld, RoadCeld, WallCeld, GrassCeld
 
+
 default = {
     'MountainCeld': Color(255, 196, 70),
     'RiverCeld': Color(116, 116, 255),

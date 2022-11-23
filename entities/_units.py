@@ -1,9 +1,4 @@
-class Singleton:
-    instance = None
-    def __new__(cls,*args, **kwargs):
-        if not isinstance(cls.instance,cls):
-            cls.instance = object.__new__(cls)
-        return cls.instance
+from .utils import Singleton
 
 class Unit:
     def __init__(self, attack_range, damage, vision_radio, health_points, move_cost) -> None:
