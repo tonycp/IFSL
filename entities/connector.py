@@ -32,7 +32,7 @@ def discrete_distance(x_0,y_0,x_1,y_1):
 class StateMannager:
     class Connector:
         __id = 0
-        def __init__(self,agent, unit:Unit, possition, functions:list[function]) -> None:
+        def __init__(self,agent, unit:Unit, possition, functions) -> None:
             self.agent = agent
             self.unit = unit 
             self.__current_hp = unit.GetHealthPoints
@@ -61,7 +61,7 @@ class StateMannager:
             return self.__current_hp
 
         def is_connected(self):
-            return self.__current_hp <= 0 
+            return self.__current_hp > 0 
     
     def __init__(self, map, agents_units_possitions):
         self.map = map
@@ -73,9 +73,9 @@ class StateMannager:
         for ag, units in agents_units_possitions:
             self.agents.append(ag)
             for unit,possition in units:
-                connector = self.create_connector(unit,possition)
-                ag.Connect(connector)
-                
+                connector = self.create_connector(ag,unit,possition)
+                ag.connect(connector)
+        
         
                 
     def create_connector(self,agent,unit:Unit,possition):
@@ -109,7 +109,7 @@ class StateMannager:
         # Ejecutar los ataques
         pass
     
-    def __move(self,connector,num_dir):
+    # def __move(self,connector,num_dir):
         
 
     def move_notifier(self,connector,direction):
