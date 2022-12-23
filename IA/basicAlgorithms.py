@@ -8,7 +8,7 @@ from math import inf
 
 def best_first_search(problem: Problem, f: function):
     "Search nodes with minimum f(node) value first."
-    node = Node(problem.initial)
+    node = NodeTree(problem.initial)
     frontier = PriorityQueue([node], key=f)
     reached = {problem.initial: node}
     while frontier:
@@ -24,7 +24,7 @@ def best_first_search(problem: Problem, f: function):
 
 def best_first_tree_search(problem: Problem, f: function):
     "A version of best_first_search without the `reached` table."
-    frontier = PriorityQueue([Node(problem.initial)], key=f)
+    frontier = PriorityQueue([NodeTree(problem.initial)], key=f)
     while frontier:
         node = frontier.pop()
         if problem.is_goal(node.state):
