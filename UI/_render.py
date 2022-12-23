@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 import pygame as pg
-from entities import Celd
+from entities import Cell
 from typing import Iterable
 from ._grid import get_grid, get_sprint, transform
 
@@ -30,7 +30,7 @@ class Render:
         self.__scale = int(self.__min_screen_size / self.__max_shape_size) + 1, int(self.__min_screen_size / self.__max_shape_size) + 1
         self.update(last_state.A1)
 
-    def __iter__(self) -> Iterable[list[Celd]]:
+    def __iter__(self) -> Iterable[list[Cell]]:
         """
         iterador que recorre la simulación después de que pygame haya iniciado
 
@@ -56,7 +56,7 @@ class Render:
             self.update(i)
             clock.tick(time)
 
-    def update(self, state: list[Celd]) -> bool:
+    def update(self, state: list[Cell]) -> bool:
         """
         update se encarga de actualizar la imagen que se muestra en el screen de pygame
 

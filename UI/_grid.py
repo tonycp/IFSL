@@ -1,7 +1,7 @@
 from typing import Union
 import numpy as np
 from pygame import Rect, Surface, Color
-from entities import Celd, MountainCeld, RiverCeld, RoadCeld, WallCeld, GrassCeld
+from entities import Cell, MountainCeld, RiverCeld, RoadCeld, WallCeld, GrassCeld
 
 
 default = {
@@ -13,7 +13,7 @@ default = {
     'Celd': Color(255, 0, 0)
 }
 
-def paint_empty_celd(i: int, j: int) -> Celd:
+def paint_empty_celd(i: int, j: int) -> Cell:
     """
     dada una posición i, j crea una celda cualquiera
 
@@ -21,7 +21,7 @@ def paint_empty_celd(i: int, j: int) -> Celd:
 
     return -> Celd
     """
-    return Celd((i, j))
+    return Cell((i, j))
 
 
 class Singleton(type):
@@ -84,7 +84,7 @@ class GrassSurface(SprintSurface, metaclass=Singleton):
         return SprintSurface.__init__(self, source, *args, **kwargs)
 
 
-def get_sprint(scale: tuple[int, int], celd: Celd, source: Union[Color, Surface] = None) -> Surface:
+def get_sprint(scale: tuple[int, int], celd: Cell, source: Union[Color, Surface] = None) -> Surface:
     """
     dado un tipo de celda retorna su representante en sprint
 
