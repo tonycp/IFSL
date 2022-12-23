@@ -51,3 +51,6 @@ def int_to_direction(direction):
         return DIRECTIONS.W
     elif direction == 7:
         return DIRECTIONS.NW
+    
+def validMove(x,y, lenx, leny): 
+    return  x >= 0 and x < lenx and y >= 0 and y < leny
