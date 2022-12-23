@@ -1,8 +1,8 @@
 from enum import Enum
 
 
-X_DIR = [0,1,1,1,0,-1,-1,-1]
-Y_DIR = [1,1,0,-1,-1,-1,0,1]
+I_DIR = [-1,-1,0,1,1,1,0,-1]
+J_DIR = [0,1,1,1,0,-1,-1,-1]
 
 DIRECTIONS = Enum('DIRECTIONS','N NE E SE S SW W NW')
 

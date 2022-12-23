@@ -1,8 +1,8 @@
 import numpy as np
-from entities import Celd, GrassCeld, MountainCeld, RoadCeld, RiverCeld, WallCeld
+from entities import Cell, GrassCeld, MountainCeld, RoadCeld, RiverCeld, WallCeld
 
 
-def paint_example_celd(i: int, j: int, value) -> Celd:
+def paint_example_celd(i: int, j: int, value) -> Cell:
     if value == '_':
         return GrassCeld((i, j), 1)
     elif value == '*':

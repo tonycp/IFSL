@@ -9,23 +9,23 @@ class Unit:
         self.__move_cost = move_cost
     
     @property 
-    def GetAttackRange(self):
+    def get_attack_range(self):
         return self.__attack_range
     
     @property 
-    def GetDamage(self):
+    def get_damage(self):
         return self.__damage
     
     @property 
-    def GetVisionRadio(self):
+    def get_vision_radio(self):
         return self.__vision_radio
     
     @property 
-    def GetHealthPoints(self):
+    def get_health_points(self):
         return self.__health_points
     
     @property 
-    def GetMoveCost(self):
+    def get_move_cost(self):
         return self.__move_cost
     
 class Fighter(Singleton,Unit):
