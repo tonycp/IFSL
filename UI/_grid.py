@@ -24,17 +24,20 @@ def paint_empty_celd(i: int, j: int) -> Celd:
     return Celd((i, j))
 
 
-class Singleton(object):
+class Singleton(type):
     """
     clase usada para que todas las intancias hagan referencia al mismo objeto
 
     __instance -> unica instancia de la clase
     """
-    def __new__(cls, *args, **kwargs):
-        if not hasattr(cls, '__instance'):
-            cls.__instance = super().__new__(cls, *args, **kwargs)
-        return cls.__instance
+    def __init__(cls, *args, **kwargs):
+        cls.__instance = None
+        type.__init__(cls, *args, **kwargs)
 
+    def __call__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = type.__call__(cls, *args,**kwargs)
+        return cls.__instance
 
 class SprintSurface(Surface):
     """
@@ -56,27 +59,27 @@ class SprintSurface(Surface):
             raise TypeError("source debe ser Color o Surface")
 
 
-class MountainSurface(Singleton, SprintSurface):
+class MountainSurface(SprintSurface, metaclass=Singleton):
     def __init__(self, source: Union[Color, Surface], *args, **kwargs) -> None:
         return SprintSurface.__init__(self, source, *args, **kwargs)
 
 
-class RiverSurface(Singleton, SprintSurface):
+class RiverSurface(SprintSurface, metaclass=Singleton):
     def __init__(self, source: Union[Color, Surface], *args, **kwargs) -> None:
         return SprintSurface.__init__(self, source, *args, **kwargs)
 
 
-class RoadSurface(Singleton, SprintSurface):
+class RoadSurface(SprintSurface, metaclass=Singleton):
     def __init__(self, source: Union[Color, Surface], *args, **kwargs) -> None:
         return SprintSurface.__init__(self, source, *args, **kwargs)
 
 
-class WallSurface(Singleton, SprintSurface):
+class WallSurface(SprintSurface, metaclass=Singleton):
     def __init__(self, source: Union[Color, Surface], *args, **kwargs) -> None:
         return SprintSurface.__init__(self, source, *args, **kwargs)
 
 
-class GrassSurface(Singleton, SprintSurface):
+class GrassSurface(SprintSurface, metaclass=Singleton):
     def __init__(self, source: Union[Color, Surface], *args, **kwargs) -> None:
         return SprintSurface.__init__(self, source, *args, **kwargs)
 

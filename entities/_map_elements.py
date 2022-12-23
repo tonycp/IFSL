@@ -24,33 +24,22 @@ class RiverCeld(Celd):
 
     def __init__(self, location, depth) -> None:
         self.depth = depth
-        super().__init__(location)
-
-    @property
-    def crossable(self, unit):
-        return super().crossable
+        Celd.__init__(location)
 
 class RoadCeld(Celd):
-
-    @property
-    def crossable(self, unit):
-        return super().crossable
+    pass
 
 class GrassCeld(Celd):
 
     def __init__(self, location, height) -> None:
         self.height = height
-        super().__init__(location)
-
-    @property
-    def crossable(self, unit):
-        return super().crossable
+        Celd.__init__(location)
 
 class MountainCeld(Celd):
 
     def __init__(self, location, height) -> None:
         self.height = height
-        super().__init__(location)
+        Celd.__init__(location)
 
     @property
     def crossable(self, unit):
@@ -60,7 +49,7 @@ class WallCeld(Celd):
 
     def __init__(self, location, height) -> None:
         self.height = height
-        super().__init__(location)
+        Celd.__init__(location)
 
     @property
     def crossable(self, unit):

@@ -21,7 +21,6 @@ class Render:
         self.last_state = get_grid(
             width, height) if last_state is None else last_state
 
-        self.__shape = self.last_state.shape
         self.__max_shape_size = max(self.__shape[1], self.__shape[0])
         self.__min_screen_size = min(self.__screen.get_size()[0], self.__screen.get_size()[1])
 
