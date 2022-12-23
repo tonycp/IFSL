@@ -17,6 +17,8 @@ tester.py
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
+contents
+To Read.txt
 
 # Mono auto generated files
 mono_crash.*
