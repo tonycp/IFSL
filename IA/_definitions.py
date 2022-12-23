@@ -21,47 +21,52 @@ class Problem(object):
             type(self).__name__, self.initial, self.goal)
 
 
-class Node:
+class Node(object):
     "A Node in a search tree."
-    def __init__(self, state, parent=None, adjlist=None, path_cost=0):
+    def __init__(self, state, adjlist=None):
         self.state=state
-        self.parent=parent
         self.adjlist=adjlist
-        self.path_cost=path_cost
 
     def __repr__(self): return '<{}>'.format(self.state)
+
+class NodeTree(Node):
+    def __init__(self, parent=None, path_cost=0, *args, **kwargs):
+        self.parent=parent
+        self.path_cost=path_cost
+        Node.__init__(*args, **kwargs)
+    
     def __len__(self): return 0 if self.parent is None else (1 + len(self.parent))
     def __lt__(self, other): return self.path_cost < other.path_cost
 
-failure = Node('failure', path_cost=math.inf) # Indicates an algorithm couldn't find a solution.
-cutoff  = Node('cutoff',  path_cost=math.inf) # Indicates iterative deepening search was cut off.
+failure = NodeTree(state='failure', path_cost=math.inf) # Indicates an algorithm couldn't find a solution.
+cutoff  = NodeTree(state='cutoff',  path_cost=math.inf) # Indicates iterative deepening search was cut off.
 
 
-def expand(problem: Problem, node: Node):
+def expand(problem: Problem, node: NodeTree):
     "Expand a node, generating the children nodes."
     s = node.state
     for adjlist in problem.actions(s):
         s1 = problem.result(s, adjlist)
         cost = node.path_cost + problem.action_cost(s, adjlist, s1)
-        yield Node(s1, node, adjlist, cost)
+        yield NodeTree(s1, parent=node, adjlist=adjlist, path_cost=cost)
 
-def g(n: Node): return n.path_cost
+def g(n: NodeTree): return n.path_cost
 
 
-def path_actions(node: Node):
+def path_actions(node: NodeTree):
     "The sequence of actions to get to this node."
     if node.parent is None:
         return []  
     return path_actions(node.parent) + [node.adjlist]
 
-def path_states(node: Node):
+def path_states(node: NodeTree):
     "The sequence of states to get to this node."
     if node in (cutoff, failure, None): 
         return []
     return path_states(node.parent) + [node.state]
 
 
-def is_cycle(node: Node, k: int = 30):
+def is_cycle(node: NodeTree, k: int = 30):
     "Does this node form a cycle of length k or less?"
     def find_cycle(ancestor, k):
         return (ancestor is not None and k > 0 and
