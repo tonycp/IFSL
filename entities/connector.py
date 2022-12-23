@@ -1,30 +1,6 @@
 from ._units import Unit
-from enum import Enum
+from .utils import STATES, direction_to_int, X_DIR, Y_DIR
 
-X_DIR = [0,1,1,1,0,-1,-1,-1]
-Y_DIR = [1,1,0,-1,-1,-1,0,1]
-
-DIRECTIONS = Enum('DIRECTIONS','N NE E SE S SW W NW')
-
-STATES = Enum('STATES','Moving Swaping Attacking Stand')
-
-def direction_to_int(direction):
-    if direction == DIRECTIONS.N:
-        return 0
-    elif direction == DIRECTIONS.NE:
-        return 1
-    elif direction == DIRECTIONS.E:
-        return 2
-    elif direction == DIRECTIONS.SE:
-        return 3
-    elif direction == DIRECTIONS.S:
-        return 4
-    elif direction == DIRECTIONS.SW:
-        return 5
-    elif direction == DIRECTIONS.W:
-        return 6
-    elif direction == DIRECTIONS.NW:
-        return 7
 
 def discrete_distance(x_0,y_0,x_1,y_1):
     pass

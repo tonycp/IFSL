@@ -1,24 +1,7 @@
 from .connector import StateMannager as S
-from .connector import DIRECTIONS, STATES
 from random import randint
+from .utils import int_to_direction, DIRECTIONS, STATES
 
-def int_to_direction(direction):
-    if direction == 0:
-        return DIRECTIONS.N
-    elif direction == 1:
-        return DIRECTIONS.NE
-    elif direction == 2:
-        return DIRECTIONS.E
-    elif direction == 3:
-        return DIRECTIONS.SE
-    elif direction == 4:
-        return DIRECTIONS.S
-    elif direction == 5:
-        return DIRECTIONS.SW
-    elif direction == 6:
-        return DIRECTIONS.W
-    elif direction == 7:
-        return DIRECTIONS.NW
     
 class Agent:   
     __id = 0
