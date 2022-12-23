@@ -8,7 +8,9 @@ class Problem(object):
     (or give an `is_goal` method) and perhaps other keyword args for the subclass."""
 
     def __init__(self, initial=None, goal=None, **kwds): 
-        self.__dict__.update(initial=initial, goal=goal, **kwds) 
+        self.initial=initial
+        self.goal=goal
+        self.__dict__.update(**kwds)
         
     def actions(self, state):        raise NotImplementedError
     def result(self, state, adjlist): raise NotImplementedError
@@ -28,6 +30,8 @@ class Node(object):
         self.adjlist=adjlist
 
     def __repr__(self): return '<{}>'.format(self.state)
+    def __eq__(self, __o: object) -> bool: return type(__o) is Node and self.state == __o.state
+    def __hash__(self) -> int: return hash(self.state)
 
 class NodeTree(Node):
     def __init__(self, parent=None, path_cost=0, *args, **kwargs):
@@ -50,13 +54,15 @@ def expand(problem: Problem, node: NodeTree):
         cost = node.path_cost + problem.action_cost(s, adjlist, s1)
         yield NodeTree(s1, parent=node, adjlist=adjlist, path_cost=cost)
 
-def g(n: NodeTree): return n.path_cost
+
+def default_cost(n: NodeTree): return n.path_cost
+def default_expand(n: NodeTree): return n.adjlist
 
 
 def path_actions(node: NodeTree):
     "The sequence of actions to get to this node."
     if node.parent is None:
-        return []  
+        return []
     return path_actions(node.parent) + [node.adjlist]
 
 def path_states(node: NodeTree):
