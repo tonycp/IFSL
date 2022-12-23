@@ -120,6 +120,7 @@ def RoadMapGVD(worldMap, unit):
                                 
                         vertex[(dx,dy)] = node
                 edges.add((dx,dy))
+    return vertex
     
         
                 
