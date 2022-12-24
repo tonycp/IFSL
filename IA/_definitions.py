@@ -1,5 +1,7 @@
 import math
 
+from entities.utils import DIRECTIONS, I_DIR, J_DIR
+
 class Problem(object):
     """The abstract class for a formal problem. A new domain subclasses this,
     overriding `actions` and `results`, and perhaps other methods.
@@ -14,13 +16,38 @@ class Problem(object):
         
     def actions(self, state):        raise NotImplementedError
     def result(self, state, adjlist): raise NotImplementedError
-    def is_goal(self, state):        return state == self.goal
+    def is_goal(self, state):        return state in self.goal
     def action_cost(self, s, a, s1): return 1
     def h(self, node):               return 0
     
     def __str__(self):
         return '{}({!r}, {!r})'.format(
             type(self).__name__, self.initial, self.goal)
+
+
+class FindVoronoiVertex(Problem):
+    def actions(self, state):
+        """The actions executable in this state."""
+        return [(dirvar.name, (I_DIR[dirvar.value - 1], J_DIR[dirvar.value - 1])) for dirvar in DIRECTIONS]
+
+    def result(self, state, action):
+        """The state that results from executing this action in this state."""
+        result = list(state)
+        act, i, *_ = action
+        if act == 'Fill':   # Fill i to capacity
+            result[i] = self.sizes[i]
+        elif act == 'Dump': # Empty i
+            result[i] = 0
+        elif act == 'Pour': # Pour from i into j
+            j = action[2]
+            amount = min(state[i], self.sizes[j] - state[j])
+            result[i] -= amount
+            result[j] += amount
+        return tuple(result)
+
+    def is_goal(self, state):
+        """True if the goal level is in any one of the jugs."""
+        return self.goal in states
 
 
 class Node(object):
