@@ -6,7 +6,7 @@ from typing import Iterable
 from ._grid import get_grid, get_sprint, transform
 from entities.connector import StateMannager
 from entities.agent import *
-from entities._units import Knight
+from entities._units import *
 
 class Render:
     def __init__(self, condition, map: np.matrix = None, width: int = 800, height: int = 600) -> None:
@@ -20,9 +20,11 @@ class Render:
         """
         self.condition = condition
         self.__screen = pg.display.set_mode(size=(width, height))
-        agent = Agent(RandomMove_IA(), map)
         self.map = map if map is not None else get_grid(width, height)
-        self.last_state = StateMannager(self.map, [(agent, [(Knight(), (0,0))])])
+        self.last_state = StateMannager(self.map, [
+            (Agent(RandomMove_IA(), map), [(Knight(), (map.shape[0] - 1,map.shape[1] - 1))]),
+            (Agent(RandomMove_IA(), map), [(Fighter(), (map.shape[0] - 1,0))])
+            ])
         
         self.__max_shape_size = max(self.map.shape[1], self.map.shape[0])
         self.__min_screen_size = min(self.__screen.get_size()[0], self.__screen.get_size()[1])

@@ -37,7 +37,7 @@ class NodeTree(Node):
     def __init__(self, parent=None, path_cost=0, *args, **kwargs):
         self.parent=parent
         self.path_cost=path_cost
-        Node.__init__(*args, **kwargs)
+        Node.__init__(self, *args, **kwargs)
     
     def __len__(self): return 0 if self.parent is None else (1 + len(self.parent))
     def __lt__(self, other): return self.path_cost < other.path_cost

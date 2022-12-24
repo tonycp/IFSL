@@ -10,7 +10,8 @@ default = {
     'RoadCell': Color(254, 221, 150),
     'WallCell': Color(255, 251, 217),
     'GrassCell': Color(109, 255, 123),
-    'Cell': Color(255, 0, 0)
+    'Team-1': Color(255, 0, 0),
+    'Team-2': Color(0, 0, 255)
 }
 
 def paint_empty_Cell(i: int, j: int) -> Cell:
@@ -93,7 +94,7 @@ def get_sprint(scale: tuple[int, int], Cell: Cell, source: Union[Color, Surface]
         else:
             raise NotImplementedError("Cell type indefinido")
     else:
-        source = source if source is not None else default['Cell']
+        source = source if source is not None else default[f'Team-{Cell.get_unit.agent.id}']
         return SprintSurface(source, scale)
 
 

@@ -8,7 +8,7 @@ class Agent:
     def __init__(self, ia, map) -> None:
         self.connectors = {}
         Agent.__id +=1
-        self.__id =Agent.__id 
+        self.id =Agent.__id 
         self.ia = ia
         self.map = map
     
@@ -31,6 +31,9 @@ class RandomMove_IA:
         if(connector.state == STATES.Stand):
             dir = randint(0,7)
             connector.notify_move(connector, int_to_direction(dir))
+        elif(connector.timer > 0):
+            connector.notify_move(connector, connector.prev_dir)
+        
 
                 
             
