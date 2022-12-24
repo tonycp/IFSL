@@ -18,6 +18,7 @@ tester.py
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 contents
+out
 To Read.txt
 
 # Mono auto generated files
