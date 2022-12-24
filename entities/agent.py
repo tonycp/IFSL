@@ -24,7 +24,7 @@ class Agent:
             else:
                 self.ia.get_move_for(c)
 
-    def decide(self):
+    def decide(self, view):
         self.move_connectors()
 
 
