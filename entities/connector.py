@@ -59,6 +59,7 @@ class StateMannager:
             for unit,position in units:
                 connector = self.create_connector(ag,unit,position)
                 ag.connect(connector)
+                map[position].set_unit(connector)
 
 
     def create_connector(self,agent,unit:Unit,position):

@@ -4,10 +4,8 @@ import entities.utils as util
 import numpy as np
 from math import inf
 
-DIR = [(0,1),(1,0),(0,-1),(-1,0)]
 
-
-def breadth_first_search(node: Node, filter: function, reached: set[Node] = None, h: int = -1, expand: function = default_expand) -> list[Node]:
+def breadth_first_search(node: Node, filter, reached: set[Node] = None, h: int = -1, expand=default_expand) -> list[Node]:
     frontier = [(node, 1)]
     reached = reached or set([node])
     result = []
@@ -24,7 +22,7 @@ def breadth_first_search(node: Node, filter: function, reached: set[Node] = None
     return result
 
 
-def best_first_search(node: NodeTree, filter: function, f: function = default_cost, expand: function = default_expand) -> Node:
+def best_first_search(node: NodeTree, filter, f=default_cost, expand=default_expand) -> Node:
     "Search nodes with minimum f(node) value first."
     frontier = PriorityQueue([node], key=f)
     reached = {node.state: node}
@@ -40,7 +38,7 @@ def best_first_search(node: NodeTree, filter: function, f: function = default_co
     return None
 
 
-def best_first_tree_search(node: NodeTree, filter: function, f: function = default_cost, expand: function = default_expand) -> Node:
+def best_first_tree_search(node: NodeTree, filter, f=default_cost, expand=default_expand) -> Node:
     "A version of best_first_search without the `reached` table."
     frontier = PriorityQueue([node], key=f)
     while frontier:
@@ -56,118 +54,146 @@ def best_first_tree_search(node: NodeTree, filter: function, f: function = defau
 def default_heuristic_cost(_): return 0
 def astar_cost(he): return lambda n: default_cost(n) + he(n)
 
-def astar_search(node: NodeTree, is_goal: function, expand: function, he: function = default_heuristic_cost) -> Node:
+
+def astar_search(node: NodeTree, is_goal, expand, he=default_heuristic_cost) -> Node:
     """Search nodes with minimum f(n) = g(n) + he(n)."""
     return best_first_search(node, is_goal, f=astar_cost(he), expand=expand)
 
 
-def astar_tree_search(node: NodeTree, is_goal: function, expand: function, he: function = default_heuristic_cost) -> Node:
+def astar_tree_search(node: NodeTree, is_goal, expand, he=default_heuristic_cost) -> Node:
     """Search nodes with minimum f(n) = g(n) + he(n), with no `reached` table."""
     return best_first_tree_search(node, is_goal, f=astar_cost(he), expand=expand)
 
-
-def RoadMapGVD(worldMap, unit):
-    def initialize():
-        queue = []
-        distance = np.matrix(np.zeros(shape=worldMap.shape), copy=False)
-        for i in range(0, worldMap.shape(0)):
-            for j in range(0, worldMap.shape(1)):
-                if not worldMap[i, j].crossable(unit):
-                    distance[i, j] = 0
-                    queue.append((i, j, 0))
-                else:
-                    distance[i, j] = inf
-
-        return distance, queue
-
-    distance, queue = initialize()
-
-    color = DFS(queue,distance)
-    edges = set()
-    vertex ={}
-    adj = {}
+class RoadMap:
     
+    def __init__(self, worldMap, unit) -> None:
+        self.unit = unit
+        self.vertex, self.distance, self.color = self.RoadMapGVD(worldMap,unit)
     
-    while(queue.count > 0):
+    def RoadMapGVD(worldMap, unit):
+        def initialize():
+            queue = []
+            distance = np.matrix(np.zeros(shape=worldMap.shape), copy=False)
+            for i in range(0, worldMap.shape[0]):
+                for j in range(0, worldMap.shape[1]):
+                    if not worldMap[i, j].crossable(unit):
+                        distance[i, j] = 0
+                        queue.append((i, j, 0))
+                    else:
+                        distance[i, j] = inf
 
-        x,y,d = queue.pop
-        
-        if(len(color[x,y]) > 1 ): #si ya la casilla pertenece a una arista o vertice no tiene sentido expandirla
-            continue
-        
-        for i in DIR: #Por cada direccion de expansion hacer
-            
-            dx,dy = DIR[i]
-            dx =x + dx
-            dy =y + dy            
-            
-            if util.validMove(dx,dy,worldMap.shape(0), worldMap.shape(0)): #Comprobar si es posible expandirse en esa direccion
-                
-                if distance[dx,dy] == inf: #Si la casilla aun no pertenece a ningun plano se marca como perteneciente al mismo plano que su adyacente 
-                    distance[dx,dy] = d + 1
-                    color[dx,dy] = color[x,y] 
-                    queue.append(dx,dy, d+1)
-                    continue
-                
-                elif len(color[dx,dy]) == 1 and  color[dx,dy][0] == color[x,y][0]: #Si la casilla ya pertenecia a algun plano
-                    continue                      #Y este plano es el mismo que el de su adyacente es que recien fue visitada
-                
-                if not color[x,y][0] in color[dx,dy]: 
-                    color[dx,dy]+= color[x,y] #Si el vertice no separaba a este plano se agrega que lo separa
-                    if len(color[dx,dy]) >= 3: #Si con el agrego de area la casilla arista ahora pasa a ser nodo vertice del GVD 
-                        node =  vertex.get((dx,dy)) or Node((dx,dy),adjlist=[]) #obtengo en vertice 
-                        
-                        for j in util.X_DIR:
-                            dxx =dx + util.X_DIR[j]
-                            dyy =dy +  util.Y_DIR[j]
-                            
-                            if (dxx,dyy) in vertex.keys():
-                                vertex[(dxx,dyy)].adjlist.append(node)
-                                node.adjlist.append(vertex[(dxx,dyy)])
-                            elif (dxx,dyy) in edges:
-                                min =  color[dxx,dyy][0]
-                                max =  color[dxx,dyy][1]
-                                if min < max: 
-                                    (min,max) = (max,min)
-                                adj1 = adj.get((min, max)) or []
-                                
-                                for v in adj1:
-                                    v.adjlist.append(node)
-                                    node.adjlist.append(v)
-                                
-                                adj1.append(node)
-                                adj[(min,max)] = adj1
-                                
-                        vertex[(dx,dy)] = node
-                edges.add((dx,dy))
-    return vertex
-    
-        
-                
-        
-    
+            return distance, queue
 
+        def add_border(shape):
+            border = [(-1, i, 0) for i in range(-1, shape[1])]
+            border+= [(i, shape[1],0) for i in range(-1, shape[0])]
+            border+= [(shape[0], i, 0) for i in range(0, shape[1] + 1)]
+            border+= [(i, -1, 0) for i in range(0, shape[0] + 1)]
+            return border
+
+        distance, queue = initialize()
+
+        color = DFS(queue, distance)
+        queue = add_border(worldMap.shape) + queue
+        edges = set()
+        roads = {}
+        vertex = {}
+        adj = {}
+
+        while(len(queue) > 0):
+
+            x, y, d = queue.pop(0)
+
+            # si ya la casilla pertenece a una arista o vertice no tiene sentido expandirla
+            if(util.validMove(x, y, worldMap.shape[0], worldMap.shape[1]) and color[x, y] is not None and len(color[x, y]) > 1):
+                continue
+
+            for i in range(len(util.I_DIR)): # Por cada direccion de expansion hacer
+                dx = x + util.I_DIR[i]
+                dy = y + util.J_DIR[i]
+
+                # Comprobar si es posible expandirse en esa direccion
+                if util.validMove(dx, dy, worldMap.shape[0], worldMap.shape[1]):
+                    currentcolor = [-1] if x==-1 else [-2] if y==-1 else [-3] if x== worldMap.shape[0] else [-4] 
+                    is_border = True
+                    if util.validMove(x, y, worldMap.shape[0], worldMap.shape[1]):
+                        currentcolor = color[x, y]
+                        is_border = False
+                    # Si la casilla aun no pertenece a ningun plano se marca como perteneciente al mismo plano que su adyacente
+                    if distance[dx, dy] == inf:
+                        distance[dx, dy] = d + 1
+                        color[dx, dy] = currentcolor.copy()
+                        queue.append((dx, dy, d + 1))
+                        continue
+
+                    # Si la casilla ya pertenecia a algun plano
+                    elif (len(color[dx, dy]) == 1 and color[dx, dy][0] == currentcolor[0]) or is_border:
+                        continue  # Y este plano es el mismo que el de su adyacente es que recien fue visitada
                     
 
-        
+                    if  currentcolor[0] not in color[dx, dy]:
+                        # Si el vertice no separaba a este plano se agrega que lo separa
+                        
+                        # for col in color[dx,dy]:
+                        #     r = road[(math.min(col,currentcolor[0]))]
+                            
+                        color[dx, dy] += currentcolor
+
+                        # Si con el agrego de area la casilla arista ahora pasa a ser nodo vertice del GVD
+                        if len(color[dx, dy]) >= 3:
+                            node = vertex.get((dx, dy)) or Node(
+                                (dx, dy), adjlist=[])  # obtengo en vertice
+
+                            for j in range(len(util.I_DIR)):
+                                dxx = dx + util.I_DIR[j]
+                                dyy = dy + util.J_DIR[j]
+
+                                if (dxx, dyy) in vertex.keys():
+                                    if node not in vertex[(dxx, dyy)].adjlist:
+                                        vertex[(dxx, dyy)].adjlist.append(node)
+                                        node.adjlist.append(vertex[(dxx, dyy)])
+                                elif (dxx, dyy) in edges:
+                                    min = color[dxx, dyy][0]
+                                    max = color[dxx, dyy][1]
+                                    if min > max:
+                                        (min, max) = (max, min)
+                                    adj1 = adj.get((min, max)) or []
+
+                                    if node not in adj1:
+                                        for v in adj1:
+                                            if node in v.adjlist: continue
+                                            v.adjlist.append(node)
+                                            node.adjlist.append(v)
+
+                                        adj1.append(node)
+                                        adj[(min, max)] = adj1
+
+                            vertex[(dx, dy)] = node
+                    edges.add((dx, dy))
+        return vertex, distance, color
+
+
 def DFS(obstacles, distance):
-    lenx = distance.shape(0)
-    leny = distance.shape(1)
-    
-    visited = np.empty(shape=distance.shape, dtype=[])
+    lenx = distance.shape[0]
+    leny = distance.shape[1]
+
+    visited = np.ndarray(shape=(lenx, leny), dtype=list)
     color = 0
-    
-    for (i,j) in obstacles:
-        if visited[i,j]== 0:
-            color +=1
-            internalDFS((i,j),visited,[color])
 
     def internalDFS(obstacle, visited, color):
-        x, y = obstacle
-        visited[dx, dy] = color
-        for i in util.X_DIR:
-            if util.validMove(dx,dy,lenx, leny) and visited[dx,dy]==0 and distance[dx,dy] == 0:
-                internalDFS(obstacles[dx,dy],visited,[color])
-    
-    return visited        
+        x, y, _ = obstacle
+        visited[x, y] = color.copy()
+        for i in range(len(util.I_DIR)):
 
+            dx = x + util.I_DIR[i]
+            dy = y + util.J_DIR[i]
+
+            if util.validMove(dx, dy, lenx, leny) and visited[dx, dy] is None and distance[dx, dy] == 0:
+                internalDFS((dx, dy, _), visited, color)
+
+    for (i, j, _) in obstacles:
+        if visited[i, j] is None:
+            color += 1
+            internalDFS((i, j, _), visited, [color])
+
+    return visited
