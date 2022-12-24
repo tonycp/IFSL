@@ -50,6 +50,7 @@ class FindVoronoiVertex(Problem):
         return self.goal in states
 
 
+    
 class Node(object):
     "A Node in a search tree."
     def __init__(self, state, adjlist=None):

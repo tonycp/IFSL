@@ -3,7 +3,7 @@ from random import randint
 from numpy import matrix
 from ._units import Unit
 from .utils import STATES, direction_to_int, I_DIR, J_DIR, int_to_direction, validMove
-
+from IA.basicAlgorithms import *
 
 def discrete_distance(x_0,y_0,x_1,y_1):
     return sqrt((x_0 - x_1)**2 + (y_0 - y_1)**2)
@@ -67,9 +67,17 @@ class StateMannager:
 
     def exec_round(self):
         # Pedir acciones a cada una de las IAs
+        
+        reached = []
         for agent in self.agents:
-            # Calcular vision para este agente
+            #TODO Calcular vision para este agente
+            
+            problem = FindVoronoiVertex([self.map[x.get_position()] for x in agent.connectors])
+            
+            for state in problem.initial:
+                breadth_first_search(Node(state), lambda x: x.state.get_unit.agent.id != agent.id, reached, state.get_unit.get_vision_radio,lambda n: expand(problem, n) )
             agent.decide()
+            
         # Ejecutar las acciones
         log = self.__exec_actions()
         return log

@@ -6,20 +6,20 @@ from math import inf
 
 
 
-def breadth_first_search(node: Node, filter, reached: set[Node] = None, h: int = -1, expand=default_expand) -> list[Node]:
+def breadth_first_search(node: Node, filter, reached: set[Node] = None, h: int = inf, expand=default_expand) -> list[Node]:
     frontier = [(node, 1)]
     reached = reached or set([node])
     result = []
     while frontier:
         node, nh = frontier.pop(0)
-        if nh < h:
+        if nh > h:
             return result
         if filter(node.state):
             result.append(node)
         for child in expand(node):
             if child not in reached:
                 reached.add(child)
-                frontier.append(child)
+                frontier.append((child, nh+1))
     return result
 
 
