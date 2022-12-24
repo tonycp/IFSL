@@ -1,43 +1,27 @@
 from typing import Union
 import numpy as np
 from pygame import Rect, Surface, Color
-from entities import Cell, MountainCeld, RiverCeld, RoadCeld, WallCeld, GrassCeld
+from entities import Cell, MountainCell, RiverCell, RoadCell, WallCell, GrassCell, Singleton
 
 
 default = {
-    'MountainCeld': Color(255, 196, 70),
-    'RiverCeld': Color(116, 116, 255),
-    'RoadCeld': Color(254, 221, 150),
-    'WallCeld': Color(255, 251, 217),
-    'GrassCeld': Color(109, 255, 123),
-    'Celd': Color(255, 0, 0)
+    'MountainCell': Color(255, 196, 70),
+    'RiverCell': Color(116, 116, 255),
+    'RoadCell': Color(254, 221, 150),
+    'WallCell': Color(255, 251, 217),
+    'GrassCell': Color(109, 255, 123),
+    'Cell': Color(255, 0, 0)
 }
 
-def paint_empty_celd(i: int, j: int) -> Cell:
+def paint_empty_Cell(i: int, j: int) -> Cell:
     """
-    dada una posición i, j crea una celda cualquiera
+    dada una posición i, j crea una Celda cualquiera
 
-    i y j -> índices o posiciones de la celda en el grid
+    i y j -> índices o posiciones de la Celda en el grid
 
-    return -> Celd
+    return -> Cell
     """
     return Cell((i, j))
-
-
-class Singleton(type):
-    """
-    clase usada para que todas las intancias hagan referencia al mismo objeto
-
-    __instance -> unica instancia de la clase
-    """
-    def __init__(cls, *args, **kwargs):
-        cls.__instance = None
-        type.__init__(cls, *args, **kwargs)
-
-    def __call__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = type.__call__(cls, *args,**kwargs)
-        return cls.__instance
 
 class SprintSurface(Surface):
     """
@@ -84,31 +68,32 @@ class GrassSurface(SprintSurface, metaclass=Singleton):
         return SprintSurface.__init__(self, source, *args, **kwargs)
 
 
-def get_sprint(scale: tuple[int, int], celd: Cell, source: Union[Color, Surface] = None) -> Surface:
+def get_sprint(scale: tuple[int, int], Cell: Cell, source: Union[Color, Surface] = None) -> Surface:
     """
-    dado un tipo de celda retorna su representante en sprint
+    dado un tipo de Celda retorna su representante en sprint
 
     scale -> escala del screen,
-    celd -> celda a convertir en sprint,
-    source -> representación de la celda
+    Cell -> Celda a convertir en sprint,
+    source -> representación de la Celda
 
     return -> Surface
     """
-    source = source if source is not None else default[type(celd).__name__]
-    if celd.is_empty:
-        if (type(celd) is MountainCeld):
+    if Cell.is_empty:
+        source = source if source is not None else default[type(Cell).__name__]
+        if (type(Cell) is MountainCell):
             return MountainSurface(source, scale)
-        elif (type(celd) is RiverCeld):
+        elif (type(Cell) is RiverCell):
             return RiverSurface(source, scale)
-        elif (type(celd) is RoadCeld):
+        elif (type(Cell) is RoadCell):
             return RoadSurface(source, scale)
-        elif (type(celd) is WallCeld):
+        elif (type(Cell) is WallCell):
             return WallSurface(source, scale)
-        elif (type(celd) is GrassCeld):
+        elif (type(Cell) is GrassCell):
             return GrassSurface(source, scale)
         else:
-            raise NotImplementedError("celd type indefinido")
+            raise NotImplementedError("Cell type indefinido")
     else:
+        source = source if source is not None else default['Cell']
         return SprintSurface(source, scale)
 
 
@@ -133,13 +118,13 @@ def transform( sprint: Surface,
                                   (location[0] + shape_correction[0]) * scale[1] + scale_correction[1])
 
 
-def get_grid(width: int, height: int, paint=paint_empty_celd) -> np.matrix:
+def get_grid(width: int, height: int, paint=paint_empty_Cell) -> np.matrix:
     """
     Crea una grilla a partir de las dimensiones que se pasan en el método
 
     height -> alto del grid, 
     width -> ancho del grid, 
-    paint -> función que determina que celda va en x y
+    paint -> función que determina que Celda va en x y
 
     return -> np.matrix
     """

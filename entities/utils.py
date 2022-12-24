@@ -26,12 +26,20 @@ def direction_to_int(direction):
     elif direction == DIRECTIONS.NW:
         return 7
 
-class Singleton:
-    instance = None
-    def __new__(cls,*args, **kwargs):
-        if not isinstance(cls.instance,cls):
-            cls.instance = object.__new__(cls)
-        return cls.instance
+class Singleton(type):
+    """
+    clase usada para que todas las intancias hagan referencia al mismo objeto
+
+    __instance -> unica instancia de la clase
+    """
+    def __init__(cls, *args, **kwargs):
+        cls.__instance = None
+        type.__init__(cls, *args, **kwargs)
+
+    def __call__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = type.__call__(cls, *args,**kwargs)
+        return cls.__instance
 
 
 def int_to_direction(direction):

@@ -1,15 +1,8 @@
 from cmath import sqrt
 from random import randint
-from turtle import heading, width
-from typing import List
-from unittest import result
-from django.urls import is_valid_path
-from matplotlib.pyplot import connect
 from numpy import matrix
-
-from entities.agent import Agent
 from ._units import Unit
-from .utils import DIRECTIONS, STATES, direction_to_int, I_DIR, J_DIR, int_to_direction
+from .utils import STATES, direction_to_int, I_DIR, J_DIR, int_to_direction, validMove
 
 
 def discrete_distance(x_0,y_0,x_1,y_1):
@@ -33,10 +26,10 @@ class StateMannager:
             for func in functions:
                 self.__dict__[func.__name__] = func
 
-        def __update_position(self,new_position):
+        def update_position(self,new_position):
             self.__current_position = new_position
 
-        def __update_health_points(self, new_hp):
+        def update_health_points(self, new_hp):
             if self.is_connected():
                 self.__current_hp = new_hp
                 return True
@@ -56,7 +49,7 @@ class StateMannager:
     
     def __init__(self, map, agents_units_positions):
         self.map : matrix = map
-        self.agents : List[Agent]= []
+        self.agents = []
         self.move_notifications = []
         self.swap_notifications = []
         self.attack_notifications = []
@@ -66,11 +59,10 @@ class StateMannager:
             for unit,position in units:
                 connector = self.create_connector(ag,unit,position)
                 ag.connect(connector)
-        
-        
-                
+
+
     def create_connector(self,agent,unit:Unit,position):
-        return StateMannager.Connector(agent,unit,position,[self.move_notifier,self.swap_notifier,self.attack_notifier])
+        return StateMannager.Connector(agent,unit,position,[self.notify_move, self.notify_not_move, self.notify_swap, self.notify_not_swap, self.notify_attack])
 
     def exec_round(self):
         # Pedir acciones a cada una de las IAs
@@ -80,14 +72,13 @@ class StateMannager:
         # Ejecutar las acciones
         log = self.__exec_actions()
         return log
-        pass
 
     def __exec_actions(self):
         #ejecutando movimientos
         log = []
         for connector, num_dir in self.move_notifications:
             if(not connector.prev_dir or direction_to_int(connector.prev_dir) != num_dir or connector.state != STATES.Moving):
-                connector.timer = connector.unit.move_cost
+                connector.timer = connector.unit.get_move_cost
                 connector.prev_dir = int_to_direction(num_dir)
                 connector.state = STATES.Moving
             connector.timer -= 1
@@ -95,12 +86,12 @@ class StateMannager:
                 i, j = connector.get_position()
                 new_i = i + I_DIR[num_dir]
                 new_j = j + J_DIR[num_dir]
-                if not self.map[new_i,new_j].get_connector():
+                if self.map[new_i,new_j].is_empty:
                     self.map[i,j].set_unit()
                     self.map[new_i,new_j].set_unit(connector)
-                    log.append((i,j))
-                    log.append((new_i,new_j))
-                    connector.__update_position((new_i,new_j))
+                    log.append(self.map[i,j])
+                    log.append(self.map[new_i,new_j])
+                    connector.update_position((new_i,new_j))
                 connector.state = STATES.Stand
                 connector.prev_dir = None
         #ejecutando swap
@@ -115,7 +106,7 @@ class StateMannager:
             #Si está iniciando el swap o cambió de dirección o objetivo
             if(not connector.prev_dir or not connector.prev_connector_to_swap or connector.state != STATES.Swaping
             or direction_to_int(connector.prev_dir) != num_dir or (connector.prev_connector_to_swap and connector.prev_connector_to_swap != other_connector)):
-                connector.timer = max(connector.unit.move_cost,other_connector.unit.move_cost)
+                connector.timer = max(connector.unit.get_move_cost,other_connector.unit.get_move_cost)
                 connector.prev_connector_to_swap = other_connector
                 connector.state = STATES.Stand
                 connector.prev_dir = num_dir
@@ -126,8 +117,8 @@ class StateMannager:
                 self.map[connector.get_position()].set_unit(other_connector)
                 self.map[other_connector.get_position()].set_unit(connector)
                 original_pos = connector.get_position()
-                connector.__update_position(original_pos)
-                other_connector.__update_position(connector)
+                connector.update_position(original_pos)
+                other_connector.update_position(connector)
                 log.append(connector.get_position())
                 log.append(other_connector.get_position())
         # ejecutando ataques
@@ -136,14 +127,16 @@ class StateMannager:
             was_alive = other_connector.is_connected()
             if(other_connector):
                 if(other_connector.state == STATES.Stand):
-                    other_connector.__update_health_points(other_connector.get_health_points - connector.unit.get_damage)
+                    other_connector.update_health_points(other_connector.get_health_points - connector.unit.get_damage)
                 else:
-                    if(randint(1,other_connector.unit.get_move_cost + connector.unit.get_move_cost) <= other_connector.unit.get_move_cost):
-                        other_connector.__update_health_points(other_connector.get_health_points - connector.unit.get_damage)
+                    if(randint(1,other_connector.unit.get_get_move_cost + connector.unit.get_get_move_cost) <= other_connector.unit.get_get_move_cost):
+                        other_connector.update_health_points(other_connector.get_health_points - connector.unit.get_damage)
 
             if(was_alive and not other_connector.is_connected or not was_alive and other_connector.is_connected):
                 log.append(other_connector.get_position())
-        
+        self.move_notifications = []
+        self.attack_notifications = []
+        self.swap_notifications = []
         return log
     
     def is_valid_move(self,connector: Connector,num_dir : int):
@@ -151,11 +144,12 @@ class StateMannager:
         new_i = i + I_DIR[num_dir]
         new_j = j + J_DIR[num_dir]
         height, width = self.map.shape
+        if not validMove(new_i, new_j, height, width): return False
         cell_to_move = self.map[new_i,new_j]
-        return new_i < height and new_j < width and cell_to_move.crossable(connector.unit)
+        return cell_to_move.crossable(connector.unit)
         
     
-    def notify_move(self,connector : Connector ,direction):
+    def notify_move(self, connector : Connector, direction):
         num_dir = direction_to_int(direction)
         if self.is_valid_move(connector,num_dir):
             self.move_notifications.append((connector,num_dir))
