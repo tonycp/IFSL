@@ -4,8 +4,12 @@ import entities.utils as util
 import numpy as np
 from math import inf
 
+def breadth_first_search_problem(node: NodeTree, problem: Problem, f=default_cost):
+    filter = lambda n: problem.is_goal(n.state)
+    return breadth_first_search(node=node, filter=filter, f=f)
 
-def breadth_first_search(node: Node, filter, reached: set[Node] = None, h: int = -1, expand=default_expand) -> list[Node]:
+
+def breadth_first_search(node: NodeTree, filter, reached: set[NodeTree] = None, h: int = -1) -> list[NodeTree]:
     frontier = [(node, 1)]
     reached = reached or set([node])
     result = []
@@ -21,8 +25,11 @@ def breadth_first_search(node: Node, filter, reached: set[Node] = None, h: int =
                 frontier.append(child)
     return result
 
+def best_first_search_problem(node: NodeTree, problem: Problem, f=default_cost):
+    filter = lambda n: problem.is_goal(n.state)
+    return best_first_search(node=node, filter=filter, f=f)
 
-def best_first_search(node: NodeTree, filter, f=default_cost, expand=default_expand) -> Node:
+def best_first_search(node: NodeTree, filter, f=default_cost) -> NodeTree:
     "Search nodes with minimum f(node) value first."
     frontier = PriorityQueue([node], key=f)
     reached = {node.state: node}
@@ -38,7 +45,11 @@ def best_first_search(node: NodeTree, filter, f=default_cost, expand=default_exp
     return None
 
 
-def best_first_tree_search(node: NodeTree, filter, f=default_cost, expand=default_expand) -> Node:
+def best_first_tree_search_problem(node: NodeTree, problem: Problem, f=default_cost):
+    filter = lambda n: problem.is_goal(n.state)
+    return best_first_tree_search(node=node, filter=filter, f=f)
+
+def best_first_tree_search(node: NodeTree, filter, f=default_cost) -> NodeTree:
     "A version of best_first_search without the `reached` table."
     frontier = PriorityQueue([node], key=f)
     while frontier:
@@ -54,15 +65,22 @@ def best_first_tree_search(node: NodeTree, filter, f=default_cost, expand=defaul
 def default_heuristic_cost(_): return 0
 def astar_cost(he): return lambda n: default_cost(n) + he(n)
 
+def astar_search_problem(node: NodeTree, problem: Problem, he=default_heuristic_cost):
+    is_goal = lambda n: problem.is_goal(n.state)
+    return astar_search(node=node, is_goal=is_goal, he=he)
 
-def astar_search(node: NodeTree, is_goal, expand, he=default_heuristic_cost) -> Node:
+def astar_search(node: NodeTree, is_goal, he=default_heuristic_cost) -> NodeTree:
     """Search nodes with minimum f(n) = g(n) + he(n)."""
-    return best_first_search(node, is_goal, f=astar_cost(he), expand=expand)
+    return best_first_search(node, is_goal, f=astar_cost(he))
 
 
-def astar_tree_search(node: NodeTree, is_goal, expand, he=default_heuristic_cost) -> Node:
+def astar_tree_search_problem(node: NodeTree, problem: Problem, he=default_heuristic_cost):
+    is_goal = lambda n: problem.is_goal(n.state)
+    return astar_tree_search(node=node, is_goal=is_goal, he=he)
+
+def astar_tree_search(node: NodeTree, is_goal, he=default_heuristic_cost) -> NodeTree:
     """Search nodes with minimum f(n) = g(n) + he(n), with no `reached` table."""
-    return best_first_tree_search(node, is_goal, f=astar_cost(he), expand=expand)
+    return best_first_tree_search(node, is_goal, f=astar_cost(he))
 
 class RoadMap:
     
@@ -141,7 +159,7 @@ class RoadMap:
 
                         # Si con el agrego de area la casilla arista ahora pasa a ser nodo vertice del GVD
                         if len(color[dx, dy]) >= 3:
-                            node = vertex.get((dx, dy)) or Node(
+                            node = vertex.get((dx, dy)) or NodeTree(
                                 (dx, dy), adjlist=[])  # obtengo en vertice
 
                             for j in range(len(util.I_DIR)):

@@ -1,60 +1,97 @@
 import math
-
-from entities.utils import DIRECTIONS, I_DIR, J_DIR
+from entities.utils import DIRECTIONS, I_DIR, J_DIR, validMove
 
 class Problem(object):
     """The abstract class for a formal problem. A new domain subclasses this,
     overriding `actions` and `results`, and perhaps other methods.
-    The default heuristic is 0 and the default adjlist cost is 1 for all states.
+    The default heuristic is 0 and the default actions cost is 1 for all states.
     When you create an instance of a subclass, specify `initial`, and `goal` states 
     (or give an `is_goal` method) and perhaps other keyword args for the subclass."""
 
-    def __init__(self, initial=None, goal=None, **kwds): 
-        self.initial=initial
-        self.goal=goal
+    def __init__(self, goals=None, **kwds): 
+        self.goals=goals
         self.__dict__.update(**kwds)
         
     def actions(self, state):        raise NotImplementedError
-    def result(self, state, adjlist): raise NotImplementedError
-    def is_goal(self, state):        return state in self.goal
+    def result(self, state, action): raise NotImplementedError
+    def is_goal(self, state):        return state in self.goals
     def action_cost(self, s, a, s1): return 1
     def h(self, node):               return 0
     
     def __str__(self):
         return '{}({!r}, {!r})'.format(
-            type(self).__name__, self.initial, self.goal)
+            type(self).__name__, self.goals)
 
 
 class FindVoronoiVertex(Problem):
+    def __init__(self, roadmap, *args, **kwargs):
+        self.roadmap = roadmap
+        self.dim_x, self.dim_y = roadmap.distance.shape
+        Problem.__init__(*args, **kwargs)
+
     def actions(self, state):
         """The actions executable in this state."""
-        return [(dirvar.name, (I_DIR[dirvar.value - 1], J_DIR[dirvar.value - 1])) for dirvar in DIRECTIONS]
+        x, y = state
+        dirs = [(dirvar.name, (I_DIR[dirvar.value - 1], J_DIR[dirvar.value - 1])) for dirvar in DIRECTIONS]
+        return [(name, move) for name, move in dirs 
+                                    if validMove(x + move[0], y + move[1], self.dim_x, self.dim_y) and 
+                                       len(set(self.roadmap.color[x + move[0], y + move[1]]).intersection(self.roadmap.color[x, y])) > 0]
 
     def result(self, state, action):
         """The state that results from executing this action in this state."""
-        result = list(state)
-        act, i, *_ = action
-        if act == 'Fill':   # Fill i to capacity
-            result[i] = self.sizes[i]
-        elif act == 'Dump': # Empty i
-            result[i] = 0
-        elif act == 'Pour': # Pour from i into j
-            j = action[2]
-            amount = min(state[i], self.sizes[j] - state[j])
-            result[i] -= amount
-            result[j] += amount
-        return tuple(result)
+        x, y = state
+        _, (x_dir, y_dir) = action
+        return x + x_dir, y + y_dir
 
     def is_goal(self, state):
         """True if the goal level is in any one of the jugs."""
-        return self.goal in states
+        return state in self.goals
+
+
+class MoveVoronoiProblem(Problem):
+    def __init__(self, start_costs, end_cost, roadmap, *args, **kwargs):
+        self.start_costs = start_costs
+        self.end_cost = end_cost
+        self.roadmap = roadmap
+        Problem.__init__(*args, **kwargs)
+    
+    def actions(self, state):
+        """The actions executable in this state."""
+        if len(self.roadmap.color[state]) < 3:
+            return self.roadmap.get_vertex_area(*state)
+        areas = self.roadmap.color[state]
+        actions = []
+        for i in range(0, len(areas)):
+            for j in range(i, len(areas)):
+                min = areas[i]
+                max = areas[j]
+                if min > max:
+                    (min, max) = (max, min)
+                actions += self.roadmap.adjcents.get((min, max)) or []
+        set_actions = set(actions).intersection(state)
+        return set_actions
+
+    def result(self, _, action):
+        """The state that results from executing this action in this state."""
+        return action
+
+    def is_goal(self, state):
+        """True if the goal level is in any one of the jugs."""
+        return state in self.goals
+
+    def action_cost(self, s, _, s1):
+        if len(self.roadmap.color[s]) < 3:
+            return len(self.start_costs[s1])
+        elif len(self.roadmap.color[s1]) < 3:
+            return len(self.start_costs[s])
+        return self.roadmap.get_road_cost(s, s1)
 
 
 class Node(object):
     "A Node in a search tree."
-    def __init__(self, state, adjlist=None):
+    def __init__(self, state, actions=None):
         self.state=state
-        self.adjlist=adjlist
+        self.actions=actions
 
     def __repr__(self): return '<{}>'.format(self.state)
     def __eq__(self, __o: object) -> bool: return type(__o) is Node and self.state == __o.state
@@ -71,26 +108,24 @@ class NodeTree(Node):
 
 failure = NodeTree(state='failure', path_cost=math.inf) # Indicates an algorithm couldn't find a solution.
 cutoff  = NodeTree(state='cutoff',  path_cost=math.inf) # Indicates iterative deepening search was cut off.
+def default_cost(n: NodeTree): return n.path_cost
 
 
 def expand(problem: Problem, node: NodeTree):
     "Expand a node, generating the children nodes."
     s = node.state
-    for adjlist in problem.actions(s):
-        s1 = problem.result(s, adjlist)
-        cost = node.path_cost + problem.action_cost(s, adjlist, s1)
-        yield NodeTree(s1, parent=node, adjlist=adjlist, path_cost=cost)
-
-
-def default_cost(n: NodeTree): return n.path_cost
-def default_expand(n: NodeTree): return n.adjlist
+    for actions in problem.actions(s):
+        s1 = problem.result(s, actions)
+        cost = node.path_cost + problem.action_cost(s, actions, s1)
+        yield NodeTree(s1, parent=node, actions=actions, path_cost=cost)
 
 
 def path_actions(node: NodeTree):
     "The sequence of actions to get to this node."
     if node.parent is None:
         return []
-    return path_actions(node.parent) + [node.adjlist]
+    return path_actions(node.parent) + [node.actions]
+
 
 def path_states(node: NodeTree):
     "The sequence of states to get to this node."
