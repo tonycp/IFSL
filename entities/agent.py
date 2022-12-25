@@ -4,6 +4,8 @@ from random import randint
 from .utils import int_to_direction, DIRECTIONS, STATES, I_DIR, J_DIR
 from IA.basicAlgorithms import astar_search_problem, RoadMap, breadth_first_search_problem
 from IA._definitions import NodeTree, MoveVoronoiProblem, FindVoronoiVertex, path_states
+from IA.formations import *
+
 
 I_DIR = [-1, -1, 0, 1, 1, 1, 0, -1]
 J_DIR = [0, 1, 1, 1, 0, -1, -1, -1]
@@ -135,3 +137,26 @@ def norma2(n1, n2):
     x1, y1 = n1
     x2, y2 = n2
     return ((x1 - x2)**2 + (y1 - y2)**2)**(0.5)
+
+
+class ForamtionMoveControl_IA(object):
+    def __init__(self, map, conectors, formation_shape: Formation) -> None:
+        if formation_shape.N-1 != len(conectors): return
+        self.map = map 
+        self.formation_shape = formation_shape
+        self.conectors = conectors
+        self.direction = DIRECTIONS.N
+        self.asignment ={}
+        index = 0
+        for i in conectors:
+            if index == formation_shape.main: index+=1
+            self.asignment[i] = index 
+    
+    
+            
+        
+     
+        
+    
+        
+    

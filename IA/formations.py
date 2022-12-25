@@ -31,10 +31,10 @@ class Formation:
                 self.relations[n] = (xa*x, ya*y)
 
         
-    def __init__(self, nodeN: int, edges:dict, relative_positions:dict, main:int):
+    def __init__(self, nodeN: int, edges:dict, relative_positions:dict, main:int = 0):
         self.nodes = {}
         self.main = main 
-        
+        self.N = nodeN
         for n in range(0, nodeN):
             self.nodes[n] = Formation.FormationNode(n,edges.get(n),relative_positions.get(n))
     
