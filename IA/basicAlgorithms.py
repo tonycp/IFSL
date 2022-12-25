@@ -71,7 +71,7 @@ class RoadMap:
     
     def __init__(self, worldMap, unit) -> None:
         self.unit = unit
-        self.vertex, self.distance, self.color, self.roads = RoadMap.RoadMapGVD(worldMap,unit)
+        self.vertex, self.distance, self.color, self.roads, self.areas, self.adjacents = RoadMap.RoadMapGVD(worldMap,unit)
         
     def get_road(self, v1:Node,v2:Node):
         (x1,y1) = v1.state
@@ -88,6 +88,17 @@ class RoadMap:
             return (mini,maxi) , self.roads[(mini,maxi)]
         
         return None , None
+    
+    def get_vertex_area(self,x,y):
+        colors = self.color[x,y] 
+        if len(colors) == 1:
+            return self.areas(colors[0])
+        elif len(colors) == 2:
+            mini = min(colors[0],colors[1])
+            maxi = max(colors[0], colors[1])
+            return self.adjacents[(mini,maxi)]
+        else:
+            return (x,y)
         
     def get_road_cost(self, c1:int, c2:int):
         r = self.roads.get((c1,c2)) or  self.roads.get((c2,c1))
@@ -110,6 +121,7 @@ class RoadMap:
         roads = {}
         vertex = {}
         adj = {}
+        vertex_area = {}
         
         #?######################## Inner Methods ###########################
         
@@ -140,8 +152,10 @@ class RoadMap:
                 r = roads.get((minim ,maxim)) or set()
                 r.add((x,y))
                 roads[(minim, maxim)] = r
+                return
                 
             for col in color[x,y]:
+                if col == current: continue
                 minim = min(col,current) 
                 maxim = max(col,current)
                 r = roads.gt((minim,maxim)) or set()
@@ -173,7 +187,20 @@ class RoadMap:
                         adj1.append(node)
                         adj[(mini, maxi)] = adj1
             vertex[(dx, dy)] = node
-             
+           
+        def add_to_area(x,y,current,first):
+            if first:
+                for col in color[x,y]:
+                    a = vertex_area.get(col) or set()
+                    a.add((x,y))
+                    vertex_area[col] = a
+                return
+            
+            a = vertex_area.get(current) or set()
+            a.add((x,y))
+            vertex_area[current] = a
+            
+              
         
         #?##############################################################################             
 
@@ -222,10 +249,12 @@ class RoadMap:
 
                         # Si con el agrego de area la casilla arista ahora pasa a ser nodo vertice del GVD
                         if len(color[dx, dy]) >= 3:
-                           add_to_vertex(dx,dy)
+                               add_to_road(dx,dy,currentcolor[0],len(color[dx, dy]) == 3)
+                               add_to_vertex(dx,dy)
+                           
     
                     edges.add((dx, dy))
-        return vertex, distance, color, roads
+        return vertex, distance, color, roads, vertex_area, adj
 
 
 def DFS(obstacles, distance):
