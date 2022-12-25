@@ -72,11 +72,11 @@ class StateMannager:
         for agent in self.agents:
             #TODO Calcular vision para este agente
             
-            problem = FindVoronoiVertex([self.map[x.get_position()] for x in agent.connectors])
+            # problem = FindVoronoiVertex([self.map[x.get_position()] for x in agent.connectors])
             
-            for state in problem.initial:
-                breadth_first_search(Node(state), lambda x: x.state.get_unit.agent.id != agent.id, reached, state.get_unit.get_vision_radio,lambda n: expand(problem, n) )
-            agent.decide()
+            # for state in problem.initial:
+            #     breadth_first_search(Node(state), lambda x: x.state.get_unit.agent.id != agent.id, reached, state.get_unit.get_vision_radio,lambda n: expand(problem, n) )
+            agent.decide(None)
             
         # Ejecutar las acciones
         log = self.__exec_actions()
@@ -119,7 +119,7 @@ class StateMannager:
                     else:
                         collisions[(new_i,new_j)] = [self.map[new_i,new_j].get_unit,connector]
 
-        for pos, connector_list in collisions.items:
+        for pos, connector_list in collisions.items():
             ran = randint(1,sum([con.unit.get_move_cost for con in connector_list])) 
             for con in connector_list:
                 ran -= con.unit.get_move_cost

@@ -4,23 +4,23 @@ import entities.utils as util
 import numpy as np
 from math import inf
 
-def breadth_first_search_problem(node: NodeTree, problem: Problem, f=default_cost):
+def breadth_first_search_problem(node: NodeTree, problem: Problem):
     filter = lambda n: problem.is_goal(n.state)
-    return breadth_first_search(node=node, filter=filter, f=f)
+    newexpand = lambda n: expand(problem=problem, node=n)
+    return breadth_first_search(node=node, filter=filter, adj=newexpand)
 
 
-
-def breadth_first_search(node: NodeTree, filter, reached: set[NodeTree] = None, h: int = inf) -> list[NodeTree]:
+def breadth_first_search(node: NodeTree, filter, adj, reached: set[NodeTree] = None, h: int = inf) -> list[NodeTree]:
     frontier = [(node, 1)]
     reached = reached or set([node])
     result = []
-    while frontier:
+    while len(frontier):
         node, nh = frontier.pop(0)
         if nh > h:
             return result
-        if filter(node.state):
+        if filter(node):
             result.append(node)
-        for child in expand(node):
+        for child in adj(node):
             if child not in reached:
                 reached.add(child)
                 frontier.append((child, nh+1))
@@ -28,38 +28,42 @@ def breadth_first_search(node: NodeTree, filter, reached: set[NodeTree] = None, 
 
 def best_first_search_problem(node: NodeTree, problem: Problem, f=default_cost):
     filter = lambda n: problem.is_goal(n.state)
-    return best_first_search(node=node, filter=filter, f=f)
+    newexpand = lambda n: expand(problem=problem, node=n)
+    return best_first_search(node=node, filter=filter, adj=newexpand, f=f)
 
-def best_first_search(node: NodeTree, filter, f=default_cost) -> NodeTree:
+def best_first_search(node: NodeTree, filter, adj, f=default_cost) -> NodeTree:
     "Search nodes with minimum f(node) value first."
-    frontier = PriorityQueue([node], key=f)
+    frontier = PriorityQueue()
+    frontier.put((f(node), node))
     reached = {node.state: node}
-    while frontier:
-        node = frontier.get()
-        if filter(node.state):
+    while len(frontier.queue):
+        _, node = frontier.get()
+        if filter(node):
             return node
-        for child in expand(node):
+        for child in adj(node):
             s = child.state
             if s not in reached or child.path_cost < reached[s].path_cost:
-                reached.add(child)
-                frontier.put(child)
+                reached[s] = child
+                frontier.put((f(child), child))
     return None
 
 
 def best_first_tree_search_problem(node: NodeTree, problem: Problem, f=default_cost):
     filter = lambda n: problem.is_goal(n.state)
-    return best_first_tree_search(node=node, filter=filter, f=f)
+    newexpand = lambda n: expand(problem=problem, node=n)
+    return best_first_tree_search(node=node, filter=filter, adj=newexpand, f=f)
 
-def best_first_tree_search(node: NodeTree, filter, f=default_cost) -> NodeTree:
+def best_first_tree_search(node: NodeTree, filter, adj, f=default_cost) -> NodeTree:
     "A version of best_first_search without the `reached` table."
-    frontier = PriorityQueue([node], key=f)
-    while frontier:
-        node = frontier.pop()
-        if filter(node.state):
+    frontier = PriorityQueue()
+    frontier.put((f(node), node))
+    while len(frontier):
+        _, node = frontier.get()
+        if filter(node):
             return node
-        for child in expand(node):
+        for child in adj(node):
             if not is_cycle(child):
-                frontier.add(child)
+                frontier.put((f(child), child))
     return failure
 
 
@@ -68,20 +72,22 @@ def astar_cost(he): return lambda n: default_cost(n) + he(n)
 
 def astar_search_problem(node: NodeTree, problem: Problem, he=default_heuristic_cost):
     is_goal = lambda n: problem.is_goal(n.state)
-    return astar_search(node=node, is_goal=is_goal, he=he)
+    newexpand = lambda n: expand(problem=problem, node=n)
+    return astar_search(node=node, is_goal=is_goal, adj=newexpand, he=he)
 
-def astar_search(node: NodeTree, is_goal, he=default_heuristic_cost) -> NodeTree:
+def astar_search(node: NodeTree, is_goal, adj, he=default_heuristic_cost) -> NodeTree:
     """Search nodes with minimum f(n) = g(n) + he(n)."""
-    return best_first_search(node, is_goal, f=astar_cost(he))
+    return best_first_search(node, is_goal, adj=adj, f=astar_cost(he))
 
 
 def astar_tree_search_problem(node: NodeTree, problem: Problem, he=default_heuristic_cost):
     is_goal = lambda n: problem.is_goal(n.state)
-    return astar_tree_search(node=node, is_goal=is_goal, he=he)
+    newexpand = lambda n: expand(problem=problem, node=n)
+    return astar_tree_search(node=node, is_goal=is_goal, adj=newexpand, he=he)
 
-def astar_tree_search(node: NodeTree, is_goal, he=default_heuristic_cost) -> NodeTree:
+def astar_tree_search(node: NodeTree, is_goal, adj, he=default_heuristic_cost) -> NodeTree:
     """Search nodes with minimum f(n) = g(n) + he(n), with no `reached` table."""
-    return best_first_tree_search(node, is_goal, f=astar_cost(he))
+    return best_first_tree_search(node, is_goal, adj=adj, f=astar_cost(he))
 
 
 #*Clase que maneja todo lo relacionado con el roadmap basado en el diagrama Voronoi
@@ -91,9 +97,9 @@ class RoadMap:
         self.unit = unit
         self.vertex, self.distance, self.color, self.roads, self.areas, self.adjacents = RoadMap.RoadMapGVD(worldMap,unit)
         
-    def get_road(self, v1:Node,v2:Node):
-        (x1,y1) = v1.state
-        (x2,y2) = v2.state 
+    def get_road(self, v1, v2):
+        (x1,y1) = v1
+        (x2,y2) = v2 
         
         col1 = set(self.color[x1,y1]) 
         col2 = set(self.color[x2,y2])
@@ -110,11 +116,11 @@ class RoadMap:
     def get_vertex_area(self,x,y):
         colors = self.color[x,y] 
         if len(colors) == 1:
-            return self.areas(colors[0])
+            return self.areas.get(colors[0])
         elif len(colors) == 2:
             mini = min(colors[0],colors[1])
             maxi = max(colors[0], colors[1])
-            return self.adjacents[(mini,maxi)]
+            return [node.state for node in self.adjacents[(mini,maxi)]]
         else:
             return (x,y)
         
@@ -124,7 +130,7 @@ class RoadMap:
             return len(r)
         return inf
     
-    def get_road_cost(self, v1:Node, v2:Node):
+    def get_road_cost(self, v1, v2):
         _, r = self.get_road(v1,v2)
         if r: 
             return len(r)
@@ -176,20 +182,20 @@ class RoadMap:
                 if col == current: continue
                 minim = min(col,current) 
                 maxim = max(col,current)
-                r = roads.gt((minim,maxim)) or set()
+                r = roads.get((minim,maxim)) or set()
                 r.add((x,y))
                 roads[(minim,maxim)] = r
                 
         def add_to_vertex(x,y):
-            node = vertex.get((dx, dy)) or Node((dx, dy), adjlist=[])  # obtengo en vertice
+            node = vertex.get((dx, dy)) or Node((dx, dy), actions=[])  # obtengo en vertice
             for j in range(len(util.I_DIR)):
                 dxx = dx + util.I_DIR[j]
                 dyy = dy + util.J_DIR[j]
                 
                 if (dxx, dyy) in vertex.keys():
-                    if node not in vertex[(dxx, dyy)].adjlist:
-                        vertex[(dxx, dyy)].adjlist.append(node)
-                        node.adjlist.append(vertex[(dxx, dyy)])
+                    if node not in vertex[(dxx, dyy)].actions:
+                        vertex[(dxx, dyy)].actions.append(node)
+                        node.actions.append(vertex[(dxx, dyy)])
                     
                 elif (dxx, dyy) in edges:
                     mini = min(color[dxx, dyy][0],color[dxx, dyy][1])
@@ -198,9 +204,9 @@ class RoadMap:
                     
                     if node not in adj1:
                         for v in adj1:
-                            if node in v.adjlist: continue
-                            v.adjlist.append(node)
-                            node.adjlist.append(v)
+                            if node in v.actions: continue
+                            v.actions.append(node)
+                            node.actions.append(v)
                         
                         adj1.append(node)
                         adj[(mini, maxi)] = adj1
@@ -242,11 +248,11 @@ class RoadMap:
                 # Comprobar si es posible expandirse en esa direccion
                 if util.validMove(dx, dy, worldMap.shape[0], worldMap.shape[1]):
                     currentcolor = [-1] if x==-1 else [-2] if y==-1 else [-3] if x== worldMap.shape[0] else [-4] 
-                    is_border = True
+                    # is_border = True
                     
                     if util.validMove(x, y, worldMap.shape[0], worldMap.shape[1]):
                         currentcolor = color[x, y]
-                        is_border = False
+                        # is_border = False
                     # Si la casilla aun no pertenece a ningun plano se marca como perteneciente al mismo plano que su adyacente
                     
                     if distance[dx, dy] == inf:
@@ -256,7 +262,7 @@ class RoadMap:
                         continue
 
                     # Si la casilla ya pertenecia a algun plano
-                    elif (len(color[dx, dy]) == 1 and color[dx, dy][0] == currentcolor[0]) or is_border:
+                    elif (len(color[dx, dy]) == 1 and color[dx, dy][0] == currentcolor[0]):
                         continue  # Y este plano es el mismo que el de su adyacente es que recien fue visitada
                     
 
@@ -268,6 +274,7 @@ class RoadMap:
                         # Si con el agrego de area la casilla arista ahora pasa a ser nodo vertice del GVD
                         if len(color[dx, dy]) >= 3:
                                add_to_road(dx,dy,currentcolor[0],len(color[dx, dy]) == 3)
+                               add_to_area(dx,dy,currentcolor[0],len(color[dx, dy]) == 3)
                                add_to_vertex(dx,dy)
                            
     
