@@ -30,25 +30,30 @@ class Agent(object):
         self.connectors = {}
         Agent.__id += 1
         self.id = Agent.__id
-        self.ia = ia(map)
+        self.ia = ia
         self.map = map
         self.goal = goal
+        self.formations = []
         self.roadmap = RoadMap(self.map, Knight())
 
     def connect(self, connector: S.Connector):
         self.connectors[connector._Connector__id] = connector
 
     def asign_to_formation(self, formation, conectors):
-        pass
+        self.formations.append(self.ia(conectors,formation,moveIA= RoadMapMove_IA , roadmap = self.roadmap, goal = self.goal)) 
+        
         
     def move_connectors(self):
-        for id, c in self.connectors.items():
-            if not c.is_connected():
-                self.connectors.__delitem__(id)
-            else:
-                if self.ia.goal is None and self.goal is not None:
-                    self.ia.set_goal(c, self.goal, self.roadmap)
-                self.ia.get_move_for(c)
+        for form in self.formations:
+            form.get_move()
+            
+        # for id, c in self.connectors.items():
+        #     if not c.is_connected():
+        #         self.connectors.__delitem__(id)
+        #     else:
+        #         if self.ia.goal is None and self.goal is not None:
+        #             self.ia.set_goal(c, self.goal, self.roadmap)
+        #         self.ia.get_move_for(c)
 
     def decide(self, view):
         self.move_connectors()
@@ -66,8 +71,7 @@ class RandomMove_IA(object):
 
 
 class RoadMapMove_IA(object):
-    def __init__(self, map) -> None:
-        self.map = map
+    def __init__(self) -> None:
         self.goal = None
 
     def set_goal(self, connector: S.Connector, goal=None, roadmap= None):
@@ -154,19 +158,21 @@ def norma2(n1, n2):
 
 class ForamtionMoveControl_IA(object):
     
-    def __init__(self, map, conectors, formation_shape: Formation, main_position, moveIA, roadmap) -> None:
+    def __init__(self, conectors, formation_shape: Formation, main_position = None, moveIA= None , roadmap = None, goal = None) -> None:
         if formation_shape.N-1 != len(conectors): return
         self.fake_main = S.Connector(None, Knight(), main_position, [self.notify_move]) 
         self.formation_shape = formation_shape
         self.conectors = conectors
         self.direction = DIRECTIONS.N
         self.asignment ={}
-        self.ia = moveIA(map)
+        self.ia = moveIA()
         self.roadmap = roadmap
         self.time_to_wait = max([conectors.unit.get_move_cost for conector in conectors])
         self.time_waited = self.time_to_wait
+        self.goal = goal
         index = 0
-        formation_shape.set_in(main_position)
+        if main_position:
+            formation_shape.set_in(main_position)
         for i in conectors:
             if index == formation_shape.main: 
                 index+=1

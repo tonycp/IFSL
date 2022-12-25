@@ -31,12 +31,15 @@ class Formation:
                 self.relations[n] = (xa*x, ya*y)
 
         
-    def __init__(self, nodeN: int, edges:dict, relative_positions:dict, main:int = 0):
+    def __init__(self, nodeN: int, edges:dict, relative_positions:dict, main:int = 0, main_position = None):
         self.nodes = []
         self.main = main 
         self.N = nodeN
         for n in range(0, nodeN):
             self.nodes.append(Formation.FormationNode(n,edges.get(n),relative_positions.get(n)))
+        
+        if main_position:
+            self.set_in(*main_position)
     
     def set_in(self, x,y):
         updates = {}
