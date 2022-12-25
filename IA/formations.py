@@ -32,11 +32,11 @@ class Formation:
 
         
     def __init__(self, nodeN: int, edges:dict, relative_positions:dict, main:int = 0):
-        self.nodes = {}
+        self.nodes = []
         self.main = main 
         self.N = nodeN
         for n in range(0, nodeN):
-            self.nodes[n] = Formation.FormationNode(n,edges.get(n),relative_positions.get(n))
+            self.nodes.append(Formation.FormationNode(n,edges.get(n),relative_positions.get(n)))
     
     def set_in(self, x,y):
         updates = {}
