@@ -9,20 +9,21 @@ def breadth_first_search_problem(node: NodeTree, problem: Problem, f=default_cos
     return breadth_first_search(node=node, filter=filter, f=f)
 
 
-def breadth_first_search(node: NodeTree, filter, reached: set[NodeTree] = None, h: int = -1) -> list[NodeTree]:
+
+def breadth_first_search(node: NodeTree, filter, reached: set[NodeTree] = None, h: int = inf) -> list[NodeTree]:
     frontier = [(node, 1)]
     reached = reached or set([node])
     result = []
     while frontier:
         node, nh = frontier.pop(0)
-        if nh < h:
+        if nh > h:
             return result
         if filter(node.state):
             result.append(node)
         for child in expand(node):
             if child not in reached:
                 reached.add(child)
-                frontier.append(child)
+                frontier.append((child, nh+1))
     return result
 
 def best_first_search_problem(node: NodeTree, problem: Problem, f=default_cost):
@@ -82,13 +83,66 @@ def astar_tree_search(node: NodeTree, is_goal, he=default_heuristic_cost) -> Nod
     """Search nodes with minimum f(n) = g(n) + he(n), with no `reached` table."""
     return best_first_tree_search(node, is_goal, f=astar_cost(he))
 
+
+#*Clase que maneja todo lo relacionado con el roadmap basado en el diagrama Voronoi
 class RoadMap:
     
     def __init__(self, worldMap, unit) -> None:
         self.unit = unit
-        self.vertex, self.distance, self.color = self.RoadMapGVD(worldMap,unit)
+        self.vertex, self.distance, self.color, self.roads, self.areas, self.adjacents = RoadMap.RoadMapGVD(worldMap,unit)
+        
+    def get_road(self, v1:Node,v2:Node):
+        (x1,y1) = v1.state
+        (x2,y2) = v2.state 
+        
+        col1 = set(self.color[x1,y1]) 
+        col2 = set(self.color[x2,y2])
+        
+        intercept = list(col1.intersection(col2))
+        
+        if len(intercept) == 2:
+            mini = min(intercept[0], intercept[1])
+            maxi = max(intercept[0], intercept[1]) 
+            return (mini,maxi) , self.roads[(mini,maxi)]
+        
+        return None , None
+    
+    def get_vertex_area(self,x,y):
+        colors = self.color[x,y] 
+        if len(colors) == 1:
+            return self.areas(colors[0])
+        elif len(colors) == 2:
+            mini = min(colors[0],colors[1])
+            maxi = max(colors[0], colors[1])
+            return self.adjacents[(mini,maxi)]
+        else:
+            return (x,y)
+        
+    def get_road_cost(self, c1:int, c2:int):
+        r = self.roads.get((c1,c2)) or  self.roads.get((c2,c1))
+        if r: 
+            return len(r)
+        return inf
+    
+    def get_road_cost(self, v1:Node, v2:Node):
+        _, r = self.get_road(v1,v2)
+        if r: 
+            return len(r)
+        return inf
+        
+        
     
     def RoadMapGVD(worldMap, unit):
+        
+        #?######################### Structures ############################
+        edges = set()
+        roads = {}
+        vertex = {}
+        adj = {}
+        vertex_area = {}
+        
+        #?######################## Inner Methods ###########################
+        
         def initialize():
             queue = []
             distance = np.matrix(np.zeros(shape=worldMap.shape), copy=False)
@@ -108,15 +162,70 @@ class RoadMap:
             border+= [(shape[0], i, 0) for i in range(0, shape[1] + 1)]
             border+= [(i, -1, 0) for i in range(0, shape[0] + 1)]
             return border
+        
+        def add_to_road(x,y, current, first):
+            if first:
+                minim = min(color[x,y][1],color[x,y][0]) 
+                maxim = max(color[x,y][1],color[x,y][0])
+                r = roads.get((minim ,maxim)) or set()
+                r.add((x,y))
+                roads[(minim, maxim)] = r
+                return
+                
+            for col in color[x,y]:
+                if col == current: continue
+                minim = min(col,current) 
+                maxim = max(col,current)
+                r = roads.gt((minim,maxim)) or set()
+                r.add((x,y))
+                roads[(minim,maxim)] = r
+                
+        def add_to_vertex(x,y):
+            node = vertex.get((dx, dy)) or Node((dx, dy), adjlist=[])  # obtengo en vertice
+            for j in range(len(util.I_DIR)):
+                dxx = dx + util.I_DIR[j]
+                dyy = dy + util.J_DIR[j]
+                
+                if (dxx, dyy) in vertex.keys():
+                    if node not in vertex[(dxx, dyy)].adjlist:
+                        vertex[(dxx, dyy)].adjlist.append(node)
+                        node.adjlist.append(vertex[(dxx, dyy)])
+                    
+                elif (dxx, dyy) in edges:
+                    mini = min(color[dxx, dyy][0],color[dxx, dyy][1])
+                    maxi = max(color[dxx, dyy][0],color[dxx, dyy][1])
+                    adj1 = adj.get((mini, maxi)) or []
+                    
+                    if node not in adj1:
+                        for v in adj1:
+                            if node in v.adjlist: continue
+                            v.adjlist.append(node)
+                            node.adjlist.append(v)
+                        
+                        adj1.append(node)
+                        adj[(mini, maxi)] = adj1
+            vertex[(dx, dy)] = node
+           
+        def add_to_area(x,y,current,first):
+            if first:
+                for col in color[x,y]:
+                    a = vertex_area.get(col) or set()
+                    a.add((x,y))
+                    vertex_area[col] = a
+                return
+            
+            a = vertex_area.get(current) or set()
+            a.add((x,y))
+            vertex_area[current] = a
+            
+              
+        
+        #?##############################################################################             
 
         distance, queue = initialize()
-
         color = DFS(queue, distance)
         queue = add_border(worldMap.shape) + queue
-        edges = set()
-        roads = {}
-        vertex = {}
-        adj = {}
+
 
         while(len(queue) > 0):
 
@@ -134,10 +243,12 @@ class RoadMap:
                 if util.validMove(dx, dy, worldMap.shape[0], worldMap.shape[1]):
                     currentcolor = [-1] if x==-1 else [-2] if y==-1 else [-3] if x== worldMap.shape[0] else [-4] 
                     is_border = True
+                    
                     if util.validMove(x, y, worldMap.shape[0], worldMap.shape[1]):
                         currentcolor = color[x, y]
                         is_border = False
                     # Si la casilla aun no pertenece a ningun plano se marca como perteneciente al mismo plano que su adyacente
+                    
                     if distance[dx, dy] == inf:
                         distance[dx, dy] = d + 1
                         color[dx, dy] = currentcolor.copy()
@@ -151,44 +262,17 @@ class RoadMap:
 
                     if  currentcolor[0] not in color[dx, dy]:
                         # Si el vertice no separaba a este plano se agrega que lo separa
-                        
-                        # for col in color[dx,dy]:
-                        #     r = road[(math.min(col,currentcolor[0]))]
-                            
                         color[dx, dy] += currentcolor
+                        add_to_road(dx,dy,currentcolor[0], len(color[dx,dy])== 2) 
 
                         # Si con el agrego de area la casilla arista ahora pasa a ser nodo vertice del GVD
                         if len(color[dx, dy]) >= 3:
-                            node = vertex.get((dx, dy)) or NodeTree(
-                                (dx, dy), adjlist=[])  # obtengo en vertice
-
-                            for j in range(len(util.I_DIR)):
-                                dxx = dx + util.I_DIR[j]
-                                dyy = dy + util.J_DIR[j]
-
-                                if (dxx, dyy) in vertex.keys():
-                                    if node not in vertex[(dxx, dyy)].adjlist:
-                                        vertex[(dxx, dyy)].adjlist.append(node)
-                                        node.adjlist.append(vertex[(dxx, dyy)])
-                                elif (dxx, dyy) in edges:
-                                    min = color[dxx, dyy][0]
-                                    max = color[dxx, dyy][1]
-                                    if min > max:
-                                        (min, max) = (max, min)
-                                    adj1 = adj.get((min, max)) or []
-
-                                    if node not in adj1:
-                                        for v in adj1:
-                                            if node in v.adjlist: continue
-                                            v.adjlist.append(node)
-                                            node.adjlist.append(v)
-
-                                        adj1.append(node)
-                                        adj[(min, max)] = adj1
-
-                            vertex[(dx, dy)] = node
+                               add_to_road(dx,dy,currentcolor[0],len(color[dx, dy]) == 3)
+                               add_to_vertex(dx,dy)
+                           
+    
                     edges.add((dx, dy))
-        return vertex, distance, color
+        return vertex, distance, color, roads, vertex_area, adj
 
 
 def DFS(obstacles, distance):

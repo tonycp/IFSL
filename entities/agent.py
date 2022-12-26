@@ -43,7 +43,7 @@ class Agent(object):
                     self.ia.set_goal(c, self.goal)
                 self.ia.get_move_for(c)
 
-    def decide(self):
+    def decide(self, view):
         self.move_connectors()
 
 class RandomMove_IA(object):
