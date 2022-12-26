@@ -78,5 +78,16 @@ class Formation:
             self.nodes[key].rotate(rot_times,pos,updates)
             
             
+
+
+class TwoRowsFormation(Formation):
+    
+    def __init__(self, node, start):
+        nodeN = node+1
+        up_row_size = int((nodeN-1)/2) 
+        midle_row = int(up_row_size/2) + 1
+        edges =  {0: [(0, i) for i in range(1, nodeN)]}
+        relative_positions = { 0: dict([(i, (0, i - midle_row)) for i in range(1, up_row_size +1)]+ [(i, (1, i - up_row_size - midle_row)) for i in range(up_row_size +1 ,nodeN)])}
+        Formation.__init__(self,nodeN+1, edges, relative_positions, main_position=start)        
         
         
