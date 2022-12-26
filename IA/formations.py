@@ -22,15 +22,19 @@ class Formation:
                 for n in self.relations.keys():
                     x1,y1 = self.relations[n]
                     updates.append((n, (x+x1,y+y1)))
-
+        
                 
         def rotate(self, xa,ya, position, updates):
             self.position = position
+            
+            
+            
             xp, yp = position
             if self.relations:
                 for n in self.relations.keys(): 
                     x, y =self.relations[n]
-                    updates[n] = xa*x + xp, ya*y + yp
+                    npx, npy =  (xa*x + xp) + y*xa , (ya*x + yp) + y*ya 
+                    updates[n] =(xa*x + xp) + y*xa , (ya*x + yp) + y*ya 
                     self.relations[n] = (xa*x, ya*y)
 
         
