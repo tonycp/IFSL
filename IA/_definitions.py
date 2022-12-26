@@ -49,9 +49,10 @@ class FindVoronoiVertex(Problem):
 
 
 class MoveVoronoiProblem(Problem):
-    def __init__(self, start_costs, end_cost, roadmap, *args, **kwargs):
+    def __init__(self, start_costs, end_cost, start_end, roadmap, *args, **kwargs):
         self.start_costs = start_costs
         self.end_cost = end_cost
+        self.start_end = start_end
         self.roadmap = roadmap
         Problem.__init__(self, *args, **kwargs)
     
@@ -69,6 +70,8 @@ class MoveVoronoiProblem(Problem):
                     (min, max) = (max, min)
                 actions += self.roadmap.adjacents.get((min, max)) or []
         set_actions = set([node.state for node in actions]).difference([state])
+        if state in self.start_end:
+            set_actions.add(self.end_cost[state][-1])
         return set_actions
 
     def result(self, _, action):
@@ -83,7 +86,7 @@ class MoveVoronoiProblem(Problem):
         if len(self.roadmap.color[s]) < 3:
             return len(self.start_costs[s1])
         elif len(self.roadmap.color[s1]) < 3:
-            return len(self.start_costs[s])
+            return len(self.end_cost[s])
         return self.roadmap.get_road_cost(s, s1)
 
 

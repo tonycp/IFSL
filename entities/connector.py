@@ -46,6 +46,9 @@ class StateMannager:
 
         def __eq__(self, __o: object) -> bool:
             return __o.__id == self.__id
+        
+        def __hash__(self) -> int:
+            return self.__id
     
     def __init__(self, map, agents_units_positions):
         self.map : matrix = map

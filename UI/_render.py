@@ -21,9 +21,14 @@ class Render:
         self.condition = condition
         self.__screen = pg.display.set_mode(size=(width, height))
         self.map = map if map is not None else get_grid(width, height)
-        self.last_state = StateMannager(self.map, [
-            (Agent(RoadMapMove_IA, map, (0, 0)), [(Knight(), (map.shape[0] - 1,map.shape[1] - 1))])
-            ])
+        agent, units = Agent(ForamtionMoveControl_IA, map, (0, 0)), [
+            (Knight(), (map.shape[0] - 3,map.shape[1] - 3)),
+            (Knight(), (map.shape[0] - 1,map.shape[1] - 3)),
+            (Knight(), (map.shape[0] - 3,map.shape[1] - 1))
+        ]
+        self.last_state = StateMannager(self.map, [(agent, units)])
+        formation = Formation(4, dict([(0, i) for i in range(1, 4)]), dict({0: { 1: (0, 0), 2: (0, 2), 3: (2, 0)}}), 0, (map.shape[0] - 3, map.shape[1] - 3))
+        agent.asign_to_formation(formation=formation, conectors=agent.connectors)
         
         self.__max_shape_size = max(self.map.shape[1], self.map.shape[0])
         self.__min_screen_size = min(self.__screen.get_size()[0], self.__screen.get_size()[1])

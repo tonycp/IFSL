@@ -93,11 +93,11 @@ class RoadMapMove_IA(object):
             findproblem_end = FindVoronoiVertex(self.roadmap, vertexs_state_end)
 
             end = NodeTree(state=goal)
-            self.end_cost = dict([(node.state, path_states(node)[1:])
+            self.end_cost = dict([(node.state, path_states(node)[-2::-1])
                                  for node in breadth_first_search_problem(end, findproblem_end)])
-
+            start_end = [state for state in self.end_cost]
             vertexproblem = MoveVoronoiProblem(
-                start_costs=self.start_costs, end_cost=self.end_cost, roadmap=self.roadmap, goals=[goal])
+                start_costs=self.start_costs, end_cost=self.end_cost, start_end=start_end, roadmap=self.roadmap, goals=[goal])
             self.goalpath = path_states(
                 astar_search_problem(start, vertexproblem,
                                      lambda n: norma2(n.state, end.state)))[1:]
@@ -133,7 +133,7 @@ class RoadMapMove_IA(object):
             x_togo, y_togo = self.path.pop(0)
             x_position, y_position = connector.get_position()
             connector.notify_move(
-                connector, dir_tuple[(x_togo - x_position, y_togo - y_position)])
+                connector, (x_togo - x_position, y_togo - y_position))
         elif(connector.timer > 0):
             connector.notify_move(connector, connector.prev_dir)
     
@@ -158,8 +158,9 @@ def norma2(n1, n2):
 
 class ForamtionMoveControl_IA(object):
     
-    def __init__(self, conectors, formation_shape: Formation, main_position = None, moveIA= None , roadmap = None, goal = None) -> None:
+    def __init__(self, conectors:dict, formation_shape: Formation, main_position = None, moveIA= None , roadmap = None, goal = None) -> None:
         if formation_shape.N-1 != len(conectors): return
+        main_position = main_position or formation_shape.nodes[formation_shape.main].position
         self.fake_main = S.Connector(None, Knight(), main_position, [self.notify_move]) 
         self.formation_shape = formation_shape
         self.conectors = conectors
@@ -167,13 +168,13 @@ class ForamtionMoveControl_IA(object):
         self.asignment ={}
         self.ia = moveIA()
         self.roadmap = roadmap
-        self.time_to_wait = max([conectors.unit.get_move_cost for conector in conectors])
+        self.time_to_wait = max([conector.unit.get_move_cost for conector in conectors.values()])
         self.time_waited = self.time_to_wait
         self.goal = goal
         index = 0
-        if main_position:
-            formation_shape.set_in(main_position)
-        for i in conectors:
+        if main_position and formation_shape.nodes[formation_shape.main].position is None:
+            formation_shape.set_in(*main_position)
+        for i in conectors.values():
             if index == formation_shape.main: 
                 index+=1
             self.asignment[i] = index
@@ -194,11 +195,13 @@ class ForamtionMoveControl_IA(object):
                     key.notify_move(key, key.prev_dir) 
     
     def notify_move(self, conector, direction):
-        x, y = I_DIR[direction.value] , J_DIR[direction.value] 
-        self.formation_shape.move(x,y)
+        self.formation_shape.move(*direction)
+        i, j = self.fake_main.get_position()
+        newposs = i + direction[0], j + direction[1]
+        self.fake_main.update_position(newposs)
         for key in self.asignment.keys():
             if(key.state == STATES.Stand):
-                key.notify_move(key, direction)
+                key.notify_move(key, dir_tuple[direction])
             elif(key.timer > 0):
                 key.notify_move(key, key.prev_dir) 
         
