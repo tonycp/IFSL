@@ -27,7 +27,7 @@ class FindVoronoiVertex(Problem):
     def __init__(self, roadmap, *args, **kwargs):
         self.roadmap = roadmap
         self.dim_x, self.dim_y = roadmap.distance.shape
-        Problem.__init__(*args, **kwargs)
+        Problem.__init__(self, *args, **kwargs)
 
     def actions(self, state):
         """The actions executable in this state."""
@@ -53,7 +53,7 @@ class MoveVoronoiProblem(Problem):
         self.start_costs = start_costs
         self.end_cost = end_cost
         self.roadmap = roadmap
-        Problem.__init__(*args, **kwargs)
+        Problem.__init__(self, *args, **kwargs)
     
     def actions(self, state):
         """The actions executable in this state."""
@@ -62,13 +62,13 @@ class MoveVoronoiProblem(Problem):
         areas = self.roadmap.color[state]
         actions = []
         for i in range(0, len(areas)):
-            for j in range(i, len(areas)):
+            for j in range(i + 1, len(areas)):
                 min = areas[i]
                 max = areas[j]
                 if min > max:
                     (min, max) = (max, min)
-                actions += self.roadmap.adjcents.get((min, max)) or []
-        set_actions = set(actions).intersection(state)
+                actions += self.roadmap.adjacents.get((min, max)) or []
+        set_actions = set([node.state for node in actions]).difference([state])
         return set_actions
 
     def result(self, _, action):
@@ -95,7 +95,7 @@ class Node(object):
         self.actions=actions
 
     def __repr__(self): return '<{}>'.format(self.state)
-    def __eq__(self, __o: object) -> bool: return type(__o) is Node and self.state == __o.state
+    def __eq__(self, __o: object) -> bool: return __o is not None and self.state == __o.state
     def __hash__(self) -> int: return hash(self.state)
 
 class NodeTree(Node):
@@ -118,7 +118,7 @@ def expand(problem: Problem, node: NodeTree):
     for actions in problem.actions(s):
         s1 = problem.result(s, actions)
         cost = node.path_cost + problem.action_cost(s, actions, s1)
-        yield NodeTree(s1, parent=node, actions=actions, path_cost=cost)
+        yield NodeTree(state=s1, parent=node, actions=actions, path_cost=cost)
 
 
 def path_actions(node: NodeTree):
