@@ -119,7 +119,7 @@ class StateMannager:
                     else:
                         collisions[(new_i,new_j)] = [self.map[new_i,new_j].get_unit,connector]
 
-        for pos, connector_list in collisions.items():
+        for pos, connector_list in [(pos, connector) for pos, connector in collisions.items() if self.map[pos].get_unit]:
             ran = randint(1,sum([con.unit.get_move_cost for con in connector_list])) 
             for con in connector_list:
                 ran -= con.unit.get_move_cost
