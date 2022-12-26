@@ -18,17 +18,20 @@ class Formation:
         
         def update_position(self, x,y, updates):
             self.position = (x,y)
-            for n in self.relations.keys():
-                x1,y1 = self.relations[n]
-                updates[n] = (x+x1,y+y1)
+            if self.relations:
+                for n in self.relations.keys():
+                    x1,y1 = self.relations[n]
+                    updates.append((n, (x+x1,y+y1)))
+
                 
         def rotate(self, xa,ya, position, updates):
             self.position = position
             xp, yp = position
-            for n in self.relations.keys(): 
-                x, y =self.relations[n]
-                updates[n] = xa*x + xp, ya*y + yp
-                self.relations[n] = (xa*x, ya*y)
+            if self.relations:
+                for n in self.relations.keys(): 
+                    x, y =self.relations[n]
+                    updates[n] = xa*x + xp, ya*y + yp
+                    self.relations[n] = (xa*x, ya*y)
 
         
     def __init__(self, nodeN: int, edges:dict, relative_positions:dict, main:int = 0, main_position = None):
@@ -42,10 +45,9 @@ class Formation:
             self.set_in(*main_position)
     
     def set_in(self, x,y):
-        updates = {}
+        updates = []
         self.nodes[self.main].update_position(x,y, updates)
-        for key in updates.keys():
-            x,y = updates.pop(key)
+        for key,(x,y) in updates:
             self.nodes[key].update_position(x,y,updates)
     
     def move(self, dx,dy):
