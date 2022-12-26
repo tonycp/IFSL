@@ -1,1 +1,1 @@
-from .basicAlgorithms import RoadMapGVD
+from .basicAlgorithms import RoadMap

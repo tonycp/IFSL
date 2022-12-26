@@ -22,8 +22,7 @@ class Render:
         self.__screen = pg.display.set_mode(size=(width, height))
         self.map = map if map is not None else get_grid(width, height)
         self.last_state = StateMannager(self.map, [
-            (Agent(RandomMove_IA(), map), [(Knight(), (map.shape[0] - 1,map.shape[1] - 1))]),
-            (Agent(RandomMove_IA(), map), [(Fighter(), (map.shape[0] - 1,0))])
+            (Agent(RoadMapMove_IA, map, (0, 0)), [(Knight(), (map.shape[0] - 1,map.shape[1] - 1))])
             ])
         
         self.__max_shape_size = max(self.map.shape[1], self.map.shape[0])
