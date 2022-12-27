@@ -1,3 +1,4 @@
+from itertools import chain
 from queue import PriorityQueue
 from ._definitions import *
 import entities.utils as util
@@ -68,27 +69,104 @@ def best_first_tree_search(node: NodeTree, filter, adj, f=default_cost) -> NodeT
 
 
 def default_heuristic_cost(_): return 0
-def astar_cost(he): return lambda n: default_cost(n) + he(n)
+def astar_cost(g,he): return lambda n: g(n) + he(n)
 
-def astar_search_problem(node: NodeTree, problem: Problem, he=default_heuristic_cost):
+def astar_search_problem(node: NodeTree, problem: Problem, he=default_heuristic_cost, g=default_cost):
     is_goal = lambda n: problem.is_goal(n.state)
     newexpand = lambda n: expand(problem=problem, node=n)
-    return astar_search(node=node, is_goal=is_goal, adj=newexpand, he=he)
+    return astar_search(node=node, is_goal=is_goal, adj=newexpand, he=he, g=g)
 
-def astar_search(node: NodeTree, is_goal, adj, he=default_heuristic_cost) -> NodeTree:
+def astar_search(node: NodeTree, is_goal, adj, he=default_heuristic_cost, g=default_cost) -> NodeTree:
     """Search nodes with minimum f(n) = g(n) + he(n)."""
-    return best_first_search(node, is_goal, adj=adj, f=astar_cost(he))
+    return best_first_search(node, is_goal, adj=adj, f=astar_cost(g, he))
 
 
-def astar_tree_search_problem(node: NodeTree, problem: Problem, he=default_heuristic_cost):
+def astar_tree_search_problem(node: NodeTree, problem: Problem, he=default_heuristic_cost, g=default_cost):
     is_goal = lambda n: problem.is_goal(n.state)
     newexpand = lambda n: expand(problem=problem, node=n)
-    return astar_tree_search(node=node, is_goal=is_goal, adj=newexpand, he=he)
+    return astar_tree_search(node=node, is_goal=is_goal, adj=newexpand, he=he, g=g)
 
-def astar_tree_search(node: NodeTree, is_goal, adj, he=default_heuristic_cost) -> NodeTree:
+def astar_tree_search(node: NodeTree, is_goal, adj, he=default_heuristic_cost, g=default_cost) -> NodeTree:
     """Search nodes with minimum f(n) = g(n) + he(n), with no `reached` table."""
-    return best_first_tree_search(node, is_goal, adj=adj, f=astar_cost(he))
+    return best_first_tree_search(node, is_goal, adj=adj, f=astar_cost(g, he))
 
+class RRAstar:
+    def __init__(self, start, rrastar_problem, he=default_heuristic_cost, g=default_cost) -> None:
+        self.f = astar_cost(g=g, he=he)
+        self.frontier = PriorityQueue()
+        self.frontier.put((self.f(start), start))
+        self.reached = {start.state: start}
+        self.filter = lambda n, p: n.state == p.state[0]
+        self.adj = lambda n: expand(problem=rrastar_problem, node=n)
+
+    def resume_rrastar(self, p):
+        while len(self.frontier.queue):
+            _, node = self.frontier.get()
+            if self.filter(node, p):
+                return node
+            for child in self.adj(node):
+                s = child.state
+                if s not in self.reached or child.path_cost < self.reached[s].path_cost:
+                    self.reached[s] = child
+                    self.frontier.put((self.f(child), child))
+        return None
+
+def whcastar_heuristic(rrastar_instance: RRAstar, node: NodeTree):
+    if rrastar_instance.reached.get(node.state[0]) is not None:
+        return len(rrastar_instance.reached[node.state[0]])
+    cost = len(rrastar_instance.resume_rrastar(node))
+    if cost != 0:
+        return cost
+    return inf
+
+def init_rrastar(start, target, roadmap):
+    rrastar_problem = FindVertex(roadmap=roadmap, goals=[start])
+    he = lambda n: util.norma2(start, n.state)
+    rrastar_instance = RRAstar(start=NodeTree(state=target), rrastar_problem=rrastar_problem, he=he)
+    return rrastar_instance
+
+def start_whcastar_search(reservation_table: dict, roadmap, rrastar_instance: RRAstar, start, target, w: int):
+    agent_problem = FindWithAgent(reservation_table=reservation_table, roadmap=roadmap, goals=[(target, w)])
+    start_node = NodeTree(state=(start, 0))
+    he = lambda n: whcastar_heuristic(rrastar_instance=rrastar_instance, node=n)
+    filter = lambda n: agent_problem.is_goal(n.state) or n.state[1] == w
+    adj = lambda n: chain(expand(agent_problem, n), add_edge(n=n, reservation_table=reservation_table, rrastar_instance=rrastar_instance, w=w))
+    node = astar_search(node=start_node, is_goal=filter, adj=adj, he=he)
+    return path_states(node=node)
+
+def add_edge(n, reservation_table: dict, rrastar_instance: RRAstar, w):
+    node = rrastar_instance.reached.get(n.state[0])
+    time = len(node)
+    if time > w:
+        return []
+    current_node = n
+    id_1 = reservation_table.get((n.state[0], n.state[1] + 1))
+    for item in path_states(node)[-2::-1]:
+        id_2 = reservation_table.get((item, current_node.state[1]))
+        state = item, current_node.state[1] + 1
+        if reservation_table.get(state) is not None or (id_1 is not None and id_1 == id_2):
+            return []
+        id_1 = reservation_table.get((item, state[1] + 1))
+        current_node = NodeTree(state=state, parent=current_node, path_cost=current_node.path_cost + 1)
+    return [current_node]
+
+# (1, 2), 3
+def whcastar_search(goals: list[(tuple, tuple)], rrastar_list: list[RRAstar], roadmap, w: int):
+    reservation_table = {}
+
+    for i in range(len(goals)):
+        start, target = goals[i]
+        rrastar_list[i] = init_rrastar(start=start, target=target, roadmap=roadmap) if rrastar_list[i] is None else rrastar_list[i]
+        reservation_table[(start, 0)] = start
+    paths = {}
+    for i in range(len(goals)):
+        start, target = goals[i]
+        rrastar_instance = rrastar_list[i]
+        path = start_whcastar_search(reservation_table=reservation_table, roadmap=roadmap, rrastar_instance=rrastar_instance, start=start, target=target, w=w)
+        paths[start] = path
+        for cell in path:
+            reservation_table[cell] = start
+    return paths
 
 #*Clase que maneja todo lo relacionado con el roadmap basado en el diagrama Voronoi
 class RoadMap:
