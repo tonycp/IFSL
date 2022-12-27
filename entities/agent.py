@@ -34,6 +34,7 @@ class Agent(object):
         self.map = map
         self.goal = goal
         self.formations = []
+        self.invalidated = []
         self.roadmap = RoadMap(self.map, Knight())
 
     def connect(self, connector: S.Connector):
@@ -42,10 +43,14 @@ class Agent(object):
     def asign_to_formation(self, formation, conectors):
         self.formations.append(self.ia(conectors,formation,moveIA= RoadMapMove_IA , roadmap = self.roadmap, goal = self.goal)) 
         
-        
+     
+    def invalidations(self, invalidated_conectors):
+        self.invalidated = invalidated_conectors  
+    
+    
     def move_connectors(self):
         for form in self.formations:
-            form.get_move()
+            form.get_move(self.invalidated)
             
         # for id, c in self.connectors.items():
         #     if not c.is_connected():
@@ -171,6 +176,7 @@ class ForamtionMoveControl_IA(object):
         self.time_to_wait = max([conector.unit.get_move_cost for conector in conectors.values()])
         self.time_waited = self.time_to_wait
         self.goal = goal
+        self.positioned = False
         index = 0
         if main_position and formation_shape.nodes[formation_shape.main].position is None:
             formation_shape.set_in(*main_position)
@@ -180,19 +186,27 @@ class ForamtionMoveControl_IA(object):
             self.asignment[i] = index
             index+=1 
     
-    def get_move(self):
-        
-        if self.ia.goal is None and self.goal is not None:
-            self.ia.set_goal(self.fake_main, self.goal, self.roadmap)
-        
-        if self.time_waited == self.time_to_wait: 
-            self.time_waited = 0 
-            self.ia.get_move_for(self.fake_main)
-        else:
-            self.time_waited +=1
-            for key in self.asignment.keys():
-                if(key.state != STATES.Stand and key.timer > 0):
-                    key.notify_move(key, key.prev_dir) 
+    def get_move(self, invalidated):
+        if self.positioned:
+            if self.ia.goal is None and self.goal is not None:
+                self.ia.set_goal(self.fake_main, self.goal, self.roadmap)
+
+            if self.time_waited > self.time_to_wait and not invalidated: 
+                self.time_waited = 0 
+                self.ia.get_move_for(self.fake_main)
+
+            else:
+                self.time_waited +=1
+                for key in self.asignment.keys():
+                    if(key.state != STATES.Stand and key.timer > 0):
+                        key.notify_move(key, key.prev_dir) 
+                if invalidated: 
+                    for conector, direct in invalidated:
+                        conector.notify_move(conector, direct) 
+                        self.time_to_wait = max(self.time_to_wait, conector.unit.get_move_cost)
+        else: 
+           from_to = [(connect.unit.get_position, self.formation_shape.nodes[form_n].position) for connect, form_n in self.asignment.items]
+           #TODO Call method for formation here  
     
     def notify_move(self, conector, direction):
         self.formation_shape.move(*direction)
