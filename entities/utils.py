@@ -79,3 +79,8 @@ def int_to_direction(direction):
     
 def validMove(x,y, lenx, leny): 
     return  x >= 0 and x < lenx and y >= 0 and y < leny
+
+def norma2(n1, n2):
+    x1, y1 = n1
+    x2, y2 = n2
+    return ((x1 - x2)**2 + (y1 - y2)**2)**(0.5)

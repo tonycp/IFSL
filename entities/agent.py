@@ -2,7 +2,7 @@ from math import inf
 from .connector import StateMannager as S
 from ._units import Knight
 from random import randint
-from .utils import int_to_direction, DIRECTIONS, STATES, I_DIR, J_DIR
+from .utils import int_to_direction, DIRECTIONS, STATES, I_DIR, J_DIR, norma2
 from IA.basicAlgorithms import astar_search_problem, RoadMap, breadth_first_search_problem, best_first_search
 from IA._definitions import NodeTree, MoveVoronoiProblem, FindVoronoiVertex, path_states, expand
 from IA.formations import *
@@ -155,11 +155,6 @@ class RoadMapMove_IA(object):
     def viewrange(self, poss, actposs, vision):
         return norma2(poss, actposs) <= vision
 
-def norma2(n1, n2):
-    x1, y1 = n1
-    x2, y2 = n2
-    return ((x1 - x2)**2 + (y1 - y2)**2)**(0.5)
-
 
 class ForamtionMoveControl_IA(object):
     
@@ -218,9 +213,3 @@ class ForamtionMoveControl_IA(object):
                 key.notify_move(key, dir_tuple[direction])
             elif(key.timer > 0):
                 key.notify_move(key, key.prev_dir) 
-        
-     
-        
-    
-        
-    

@@ -23,7 +23,7 @@ class Problem(object):
             type(self).__name__, self.goals)
 
 
-class FindVoronoiVertex(Problem):
+class FindVertex(Problem):
     def __init__(self, roadmap, *args, **kwargs):
         self.roadmap = roadmap
         self.dim_x, self.dim_y = roadmap.distance.shape
@@ -34,8 +34,7 @@ class FindVoronoiVertex(Problem):
         x, y = state
         dirs = [(dirvar.name, (I_DIR[dirvar.value - 1], J_DIR[dirvar.value - 1])) for dirvar in DIRECTIONS]
         return [(name, move) for name, move in dirs 
-                                    if validMove(x + move[0], y + move[1], self.dim_x, self.dim_y) and 
-                                       len(set(self.roadmap.color[x + move[0], y + move[1]]).intersection(self.roadmap.color[x, y])) > 0]
+                                    if validMove(x + move[0], y + move[1], self.dim_x, self.dim_y) and self.roadmap.color[x + move[0], y + move[1]] != 0]
 
     def result(self, state, action):
         """The state that results from executing this action in this state."""
@@ -46,6 +45,47 @@ class FindVoronoiVertex(Problem):
     def is_goal(self, state):
         """True if the goal level is in any one of the jugs."""
         return state in self.goals
+
+
+class FindWithAgent(FindVertex):
+    def __init__(self, reservation_table: dict, *args, **kwargs):
+        self.reservation_table = reservation_table
+        FindVertex.__init__(self, *args, **kwargs)
+
+    def actions(self, state):
+        poss, time = state
+        actions = FindVertex.actions(self, poss)
+        actions.append(("wait", (0, 0)))
+        
+        newactions = []
+        id_1 = self.reservation_table.get((poss, time + 1))
+        for name, move in actions:
+            s1 = self.result(state, (name, move))
+            id_2 = self.reservation_table.get((s1[0], time))
+            if self.reservation_table.get(s1) is None and (id_1 is None or id_1 != id_2):
+                newactions.append((name, move))
+        return newactions
+    
+    def result(self, state, action):
+        return (FindVertex.result(self, state[0], action), state[1] + 1)
+    
+    def action_cost(self, s, a, s1):
+        if a[0] == "wait" and s1 in self.goals and s1[1] < self.goals[0][1]:
+            return 0
+        if s1[1] != self.goals[0][1]:
+            return 1
+        return FindVertex.action_cost(self, s, a, s1)    
+    
+    def is_goal(self, state):
+        return FindVertex.is_goal(self, state)
+    
+
+class FindVoronoiVertex(FindVertex):
+    def actions(self, state):
+        """The actions executable in this state."""
+        x, y = state
+        return [(name, move) for name, move in FindVertex.actions(self, state) 
+                            if len(set(self.roadmap.color[x + move[0], y + move[1]]).intersection(self.roadmap.color[x, y])) > 0]
 
 
 class MoveVoronoiProblem(Problem):
@@ -125,7 +165,7 @@ def expand(problem: Problem, node: NodeTree):
 
 
 def path_actions(node: NodeTree):
-    "The sequence of actions to get to this node."
+    "The sequence of actions to get to this node." 
     if node.parent is None:
         return []
     return path_actions(node.parent) + [node.actions]
