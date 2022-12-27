@@ -169,6 +169,31 @@ def whcastar_search(goals: list[(tuple, tuple)], rrastar_list: list[RRAstar], ro
             reservation_table[cell] = connector
     return paths
 
+def slice(roadmap, start_poss, width, height, color):
+    slice_map = np.ndarray(shape=(width, height), dtype=NodeTree)
+    node_path = slice_map[get_path_node()] = NodeTree(state=(1, 1))
+    for j in range(width):
+        actual_up = node_path
+        for i in range(height):
+            x, y = start_poss
+            dx, dy = x + i, y + j
+            if roadmap.color[dx, dy] not in color:
+                continue
+            node = get_path_node(slice_map, dx, dy)
+            if node is not None:
+                if node.state[0] is not None:
+                    actual_up = slice_map[dx, dy] = NodeTree(state=node.state, parent=node)
+                elif node.state[1] is not None:
+                    slice_map[dx, dy] = NodeTree(state=node.state, parent=node)
+            else:
+                slice_map[dx, dy] = NodeTree(state=(True, True))
+                
+def get_first_path(roadmap, x, y):
+    pass
+
+def get_path_node(slice_map, x, y):
+    pass
+
 #*Clase que maneja todo lo relacionado con el roadmap basado en el diagrama Voronoi
 class RoadMap:
     
