@@ -24,24 +24,34 @@ class Formation:
                     updates.append((n, (x+x1,y+y1)))
         
                 
-        def rotate(self, xa,ya, position, updates):
+        def rotate(self, rot_times, position, updates):
             self.position = position
-            
-            
-            
             xp, yp = position
             if self.relations:
                 for n in self.relations.keys(): 
                     x, y =self.relations[n]
-                    npx, npy =  (xa*x + xp) + y*xa , (ya*x + yp) + y*ya 
-                    updates[n] =(xa*x + xp) + y*xa , (ya*x + yp) + y*ya 
-                    self.relations[n] = (xa*x, ya*y)
+                    (nsx,nsy),(ewx,ewy) = Formation.FormationNode.get_directions(x,y, rot_times)
+                    updates[n] = (nsx*x + xp) + y*ewx , (nsy*x + yp) + y*ewy 
+                    self.relations[n] = nsx*x  + y*ewx, nsy*x  + y*ewy 
 
+        def get_directions(s1,s2,rot):
+            ns = None
+            ew = None
+            if s1 >0:
+                ns = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.S) + rot))%7)
+            else:
+                ns = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.N) + rot)%7))
+            if s2 >0:
+                ew = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.E) + rot))%7)
+            else:
+                ex = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.W) + rot)%7))
+            return ns, ew
         
-    def __init__(self, nodeN: int, edges:dict, relative_positions:dict, main:int = 0, main_position = None):
+    def __init__(self, nodeN: int, edges:dict, relative_positions:dict, main:int = 0, main_position = None, direction = DIRECTIONS.N):
         self.nodes = []
         self.main = main 
         self.N = nodeN
+        self.dir = direction
         for n in range(0, nodeN):
             self.nodes.append(Formation.FormationNode(n,edges.get(n),relative_positions.get(n)))
         
@@ -59,14 +69,25 @@ class Formation:
         self.set_in(x+dx, y+dy)
         
     def rotate(self, angle: int):
-        xa = I_DIR[angle]
-        ya = J_DIR[angle]
+        rot_times = angle - direction_to_int(self.dir) 
+        self.dir = int_to_direction(angle)
         updates = {}
-        self.nodes[self.main].rotate(xa,ya,self.nodes[self.main].position, updates)
+        self.nodes[self.main].rotate(rot_times,self.nodes[self.main].position, updates)
         for key in updates.keys():
             pos = updates.pop(key)
-            self.nodes[key].rotate(xa,ya,pos,updates)
+            self.nodes[key].rotate(rot_times,pos,updates)
             
             
+
+
+class TwoRowsFormation(Formation):
+    
+    def __init__(self, node, start):
+        nodeN = node+1
+        up_row_size = int((nodeN-1)/2) 
+        midle_row = int(up_row_size/2) + 1
+        edges =  {0: [(0, i) for i in range(1, nodeN)]}
+        relative_positions = { 0: dict([(i, (0, i - midle_row)) for i in range(1, up_row_size +1)]+ [(i, (1, i - up_row_size - midle_row)) for i in range(up_row_size +1 ,nodeN)])}
+        Formation.__init__(self,nodeN+1, edges, relative_positions, main_position=start)        
         
         

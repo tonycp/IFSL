@@ -26,6 +26,23 @@ def direction_to_int(direction):
     elif direction == DIRECTIONS.NW:
         return 7
 
+def direction_to_tuple(direction):
+    if direction == DIRECTIONS.N:
+        return (-1,0)
+    elif direction == DIRECTIONS.NE:
+        return (-1,1)
+    elif direction == DIRECTIONS.E:
+        return (0,1)
+    elif direction == DIRECTIONS.SE:
+        return (1,1)
+    elif direction == DIRECTIONS.S:
+        return (1,0)
+    elif direction == DIRECTIONS.SW:
+        return (1,-1)
+    elif direction == DIRECTIONS.W:
+        return (0,-1)
+    elif direction == DIRECTIONS.NW:
+        return (-1,-1)
 class Singleton(type):
     """
     clase usada para que todas las intancias hagan referencia al mismo objeto
