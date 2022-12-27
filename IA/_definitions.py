@@ -1,3 +1,4 @@
+import numpy as np
 import math
 from entities.utils import DIRECTIONS, I_DIR, J_DIR, validMove
 
@@ -144,3 +145,134 @@ def is_cycle(node: NodeTree, k: int = 30):
         return (ancestor is not None and k > 0 and
                 (ancestor.state == node.state or find_cycle(ancestor.parent, k - 1)))
     return find_cycle(node.parent, k)
+
+class CSP:
+    def __init__(self,domain, restrictions, variables, **kwds):
+        self.asignment = {}
+        self.domain = domain
+        self.variables = variables
+        self.restrictions = restrictions
+    
+    def back_track_solving(self, asignment:dict = {}):
+        if self.is_complete(asignment):
+            self.asignment = asignment 
+            return True
+        var = self.get_unasigned_variable(asignment)
+        
+        domain_copy = self.domain.copy()
+        copy_asignment = asignment.copy()
+        for value in domain_copy[var]:
+            if not self.is_valid_current_asign(value, var, copy_asignment): continue
+            asignment[var] = value
+            self.domain[var] = value
+            
+            if self.arc_consistence(asignment) and self.back_track_solving(asignment):
+                return True
+            asignment = copy_asignment.copy()
+            self.domain = domain_copy.copy()
+        return False
+    
+    def arc_consistence(self, queue):
+        while queue:
+            x ,y = queue.pop(0)
+            if self.remove_inconsistent_values(x,y):
+                for z in self.neighbors(x):
+                    queue.append(z,x)
+                    
+
+            
+        
+    def is_complete(self, asignment): raise NotImplementedError
+    def get_unasigned_variable(self, asignement): raise NotImplementedError 
+    def is_valid_asignment(self, asignment): raise NotImplementedError
+    def is_valid_current_asign(self, domain_value, unasigned_variable,asignment):raise NotImplementedError
+    
+    def neighbors(self, x):
+        result = []
+        for v in self.variables:
+            if v!=x:
+                result.append(v)
+        return result
+        
+
+class CSP_UncrossedAsignment(CSP):
+    
+    def __init__(self, domain, variables, **kwds):
+        restrictions = dict([(v , [i for i in variables]) for v in variables])
+        real_domain = dict([(v , [i for i in domain]) for v in variables])
+        
+        if len(domain) != len(variables): raise ValueError
+        CSP.__init__(self, real_domain, restrictions, variables, **kwds)
+        
+    def is_complete(self, asignment):
+        return all([asignment.get(var) is not None for var in self.variables])
+    
+    def get_unasigned_variable(self, asignement):
+        for variable in self.variables:
+            if asignement.get(variable) is None:
+                return variable 
+        return None
+    
+    def is_valid_current_asign(self, domain_value, unasigned_variable,asignment):
+        for (x1,y1), conector in asignment.items():
+            (x2,y2) = conector.get_position() 
+            (x3,y3) = domain_value.get_position()
+            (x4,y4) = unasigned_variable
+            if CSP_UncrossedAsignment.intersect(x1,x2,x3,x4,y1,y2,y3,y4) and CSP_UncrossedAsignment.intersect(x3,x4,x1,x2,y3,y4,y1,y2):
+                    return False
+        return True
+    
+    def is_valid_asignment(self,asignment):
+        x =  asignment.items()
+        for i in range(0,len(x)):
+            (x1,y1),conector = x[i] 
+            (x2,y2) = conector.get_position() 
+            for j in range(i,len(x)):
+                (x3,y3),conector = x[i] 
+                (x4,y4) = conector.get_position()
+                if CSP_UncrossedAsignment.intersect(x1,x2,x3,x4,y1,y2,y3,y4) and CSP_UncrossedAsignment.intersect(x3,x4,x1,x2,y3,y4,y1,y2):
+                    return False
+        
+        return True
+    
+    def remove_inconsistent_values(self, x, y):
+        removed = False
+        rem = []
+        for val in self.domain[x]:
+            x2,y2 = val.get_position()
+            round = False
+            for val2 in self.domain[y]:
+                x4,y4 = val2.get_position()
+                round |= val != val2 and not (CSP_UncrossedAsignment.intersect(x[0],x2,y[0],x4,x[1],y2,y[1],y4) and CSP_UncrossedAsignment.intersect(y[0],x4,x[0],x2,y[1],y4,x[1],y2))
+            if not round:
+                rem.append(val)
+                removed = True
+        
+        for val in rem:
+            self.domain[x].remove(val)
+            
+        return removed
+
+
+    def intersect(x1,x2,x3,x4,y1,y2,y3,y4):
+        dx, dy = x2-x1, y2-y1
+        dx1, dy1 = x3-x1, y3-y1
+        dx2, dy2 = x4-x2, y4-y2 
+        return (dx*dy1 - dy*dx1) * (dx*dy2 - dy*dx2) <= 0       
+    
+
+                
+            
+            
+            
+        
+    
+            
+            
+            
+    
+
+
+        
+        
+    
