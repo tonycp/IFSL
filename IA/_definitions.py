@@ -4,6 +4,12 @@ import math
 from entities.utils import DIRECTIONS, I_DIR, J_DIR, validMove, norma2, validMove, int_to_direction
 from entities.connector import StateMannager as S
 from collections import defaultdict
+
+
+#*####################################################################################
+#*                                     Search                                        #
+#*####################################################################################
+
 class Problem(object):
     """The abstract class for a formal problem. A new domain subclasses this,
     overriding `actions` and `results`, and perhaps other methods.
@@ -402,7 +408,7 @@ class Game:
         """Return the value of this final state to player."""
         raise NotImplementedError
     
-    def undo(self,state):raise NotImplementedError
+    def undo(self,state, action):raise NotImplementedError
         
 class FigthGame(Game):
     def __init__(self, map_copy, player1, player2):
@@ -462,10 +468,27 @@ class FigthGame(Game):
         if player == player2["id"]:
             player1, player2 = player2,player1
         
-        h = player1["hp"][-1]/ player2["hp"][-1]
-        if 
-            
-                        
+        h = player1["hp"][-1]/ player2["hp"][-1] 
+        if norma2(player1["pos"][-1], player2["pos"][-1]) > player1["view"]:
+            h -= 5
+        if player1["attack"] >= norma2(player1["pos"][-1], player2["pos"][-1]) >= player2["attack"]:
+            h+=10
+        return h
+         
+    def undo(self, state, action):
+        player = state.to_move
+        player1 = state.p1
+        player2 = state.p2
+        if player == player1["id"]:
+            player1, player2 = player2,player1
+        name,_ = action
+        if  name == "attack":
+            player2["hp"].pop()
+        elif name == "move":
+            player1["pos"].pop()
+        state.to_move == player1["id"]
+              
+                      
 class State(defaultdict):
     
     def __init__(self, map, connector1, connector2, **kwds):
