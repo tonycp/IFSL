@@ -80,7 +80,7 @@ class StateMannager:
         for agent in self.agents:
             #TODO Calcular vision para este agente
             
-            # problem = FindVoronoiVertex([self.map[x.get_position()] for x in agent.connectors])
+            #problem = FindVoronoiVertex([self.map[x.get_position()] for x in agent.connectors])
             
             # for state in problem.initial:
             #     breadth_first_search(Node(state), lambda x: x.state.get_unit.agent.id != agent.id, reached, state.get_unit.get_vision_radio,lambda n: expand(problem, n) )
