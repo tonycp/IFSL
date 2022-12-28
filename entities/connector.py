@@ -45,7 +45,7 @@ class StateMannager:
             return self.__current_hp > 0 
 
         def __eq__(self, __o: object) -> bool:
-            return __o.__id == self.__id
+            return __o is not None and __o.__id == self.__id
         
         def __hash__(self) -> int:
             return self.__id

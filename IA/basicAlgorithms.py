@@ -155,17 +155,19 @@ def whcastar_search(goals: list[(tuple, tuple)], rrastar_list: list[RRAstar], ro
     reservation_table = {}
 
     for i in range(len(goals)):
-        start, target = goals[i]
+        connector, target = goals[i]
+        start = connector.get_position()
         rrastar_list[i] = init_rrastar(start=start, target=target, roadmap=roadmap) if rrastar_list[i] is None else rrastar_list[i]
-        reservation_table[(start, 0)] = start
+        reservation_table[(start, 0)] = connector
     paths = {}
     for i in range(len(goals)):
-        start, target = goals[i]
+        connector, target = goals[i]
+        start = connector.get_position()
         rrastar_instance = rrastar_list[i]
         path = start_whcastar_search(reservation_table=reservation_table, roadmap=roadmap, rrastar_instance=rrastar_instance, start=start, target=target, w=w)
-        paths[start] = path
+        paths[connector] = path
         for cell in path:
-            reservation_table[cell] = start
+            reservation_table[cell] = connector
     return paths
 
 #*Clase que maneja todo lo relacionado con el roadmap basado en el diagrama Voronoi
@@ -264,7 +266,7 @@ class RoadMap:
                 r.add((x,y))
                 roads[(minim,maxim)] = r
                 
-        def add_to_vertex(x,y):
+        def add_to_vertex(dx,dy):
             node = vertex.get((dx, dy)) or Node((dx, dy), actions=[])  # obtengo en vertice
             for j in range(len(util.I_DIR)):
                 dxx = dx + util.I_DIR[j]
@@ -275,7 +277,7 @@ class RoadMap:
                         vertex[(dxx, dyy)].actions.append(node)
                         node.actions.append(vertex[(dxx, dyy)])
                     
-                elif (dxx, dyy) in edges:
+                elif (dxx, dyy) in edges and len(set(color[dx,dy]).intersection(color[dxx,dyy]))>=2:
                     mini = min(color[dxx, dyy][0],color[dxx, dyy][1])
                     maxi = max(color[dxx, dyy][0],color[dxx, dyy][1])
                     adj1 = adj.get((mini, maxi)) or []
@@ -317,7 +319,9 @@ class RoadMap:
 
             # si ya la casilla pertenece a una arista o vertice no tiene sentido expandirla
             if(util.validMove(x, y, worldMap.shape[0], worldMap.shape[1]) and color[x, y] is not None and len(color[x, y]) > 1):
-                continue
+                if len(color[x, y]) >= 3:
+                    add_to_vertex(x,y)
+                continue                
 
             for i in range(len(util.I_DIR)): # Por cada direccion de expansion hacer
                 dx = x + util.I_DIR[i]
@@ -336,7 +340,8 @@ class RoadMap:
                     if distance[dx, dy] == inf:
                         distance[dx, dy] = d + 1
                         color[dx, dy] = currentcolor.copy()
-                        queue.append((dx, dy, d + 1))
+                        queue.append((dx, dy, d + 1))           
+
                         continue
 
                     # Si la casilla ya pertenecia a algun plano
@@ -353,9 +358,8 @@ class RoadMap:
                         if len(color[dx, dy]) >= 3:
                                add_to_road(dx,dy,currentcolor[0],len(color[dx, dy]) == 3)
                                add_to_area(dx,dy,currentcolor[0],len(color[dx, dy]) == 3)
-                               add_to_vertex(dx,dy)
-                           
-    
+
+                    queue.append((dx, dy, d + 1))           
                     edges.add((dx, dy))
         return vertex, distance, color, roads, vertex_area, adj
 

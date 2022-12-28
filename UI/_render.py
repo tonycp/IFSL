@@ -21,13 +21,16 @@ class Render:
         self.condition = condition
         self.__screen = pg.display.set_mode(size=(width, height))
         self.map = map if map is not None else get_grid(width, height)
-        agent, units = Agent(ForamtionMoveControl_IA, map, (0, 0)), [
-            (Knight(), (map.shape[0] - 3,map.shape[1] - 3)),
-            (Knight(), (map.shape[0] - 1,map.shape[1] - 3)),
-            (Knight(), (map.shape[0] - 3,map.shape[1] - 1))
+        agent, units = Agent(map, (7, 8)), [
+            (Knight(), (0, 0)),
+            (Knight(), (int((map.shape[0] - 1) / 2), int((map.shape[1] - 1) / 2))),
+            (Knight(), (4, 7)),
+            (Knight(), (map.shape[0] - 1, 0)),
+            (Knight(), (0, map.shape[1] - 1)),
+            (Knight(), (map.shape[0] - 1,map.shape[1] - 1)),
         ]
         self.last_state = StateMannager(self.map, [(agent, units)])
-        formation = Formation(4, dict([(0, i) for i in range(1, 4)]), dict({0: { 1: (0, 0), 2: (0, 2), 3: (2, 0)}}), 0, (map.shape[0] - 3, map.shape[1] - 3))
+        formation = TwoRowsFormation(6, (18, 8))
         agent.asign_to_formation(formation=formation, conectors=agent.connectors)
         
         self.__max_shape_size = max(self.map.shape[1], self.map.shape[0])

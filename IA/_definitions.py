@@ -34,7 +34,7 @@ class FindVertex(Problem):
         x, y = state
         dirs = [(dirvar.name, (I_DIR[dirvar.value - 1], J_DIR[dirvar.value - 1])) for dirvar in DIRECTIONS]
         return [(name, move) for name, move in dirs 
-                                    if validMove(x + move[0], y + move[1], self.dim_x, self.dim_y) and self.roadmap.color[x + move[0], y + move[1]] != 0]
+                                    if validMove(x + move[0], y + move[1], self.dim_x, self.dim_y) and self.roadmap.distance[x + move[0], y + move[1]] != 0]
 
     def result(self, state, action):
         """The state that results from executing this action in this state."""
@@ -100,19 +100,18 @@ class MoveVoronoiProblem(Problem):
         """The actions executable in this state."""
         if len(self.roadmap.color[state]) < 3:
             return self.roadmap.get_vertex_area(*state)
-        areas = self.roadmap.color[state]
-        actions = []
-        for i in range(0, len(areas)):
-            for j in range(i + 1, len(areas)):
-                min = areas[i]
-                max = areas[j]
-                if min > max:
-                    (min, max) = (max, min)
-                actions += self.roadmap.adjacents.get((min, max)) or []
-        set_actions = set([node.state for node in actions]).difference([state])
+        # areas = self.roadmap.color[state]
+        # for i in range(0, len(areas)):
+        #     for j in range(i + 1, len(areas)):
+        #         min = areas[i]
+        #         max = areas[j]
+        #         if min > max:
+        #             (min, max) = (max, min)
+        #         actions += self.roadmap.adjacents.get((min, max)) or []
+        actions = [node.state for node in self.roadmap.vertex[state].actions]
         if state in self.start_end:
-            set_actions.add(self.end_cost[state][-1])
-        return set_actions
+            actions.append(self.end_cost[state][-1])
+        return actions
 
     def result(self, _, action):
         """The state that results from executing this action in this state."""
