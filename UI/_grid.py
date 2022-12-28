@@ -94,7 +94,7 @@ def get_sprint(scale: tuple[int, int], Cell: Cell, source: Union[Color, Surface]
         else:
             raise NotImplementedError("Cell type indefinido")
     else:
-        source = source if source is not None else default[f'Team-{Cell.get_unit.agent.id}']
+        source = source if source is not None else default[f'Team-{Cell.unit.agent.id}']
         return SprintSurface(source, scale)
 
 
