@@ -87,7 +87,9 @@ class MoveVoronoiProblem(Problem):
         return self.roadmap.get_road_cost(s, s1)
 
 
-    
+
+
+
 class Node(object):
     "A Node in a search tree."
     def __init__(self, state, actions=None):

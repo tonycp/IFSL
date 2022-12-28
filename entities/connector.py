@@ -1,9 +1,11 @@
 from cmath import sqrt
 from random import randint
-from numpy import matrix
+
+from matplotlib.pyplot import connect
 from ._units import Unit
 from .utils import STATES, direction_to_int, I_DIR, J_DIR, int_to_direction, validMove
 from IA.basicAlgorithms import *
+from IA._definitions import Node
 
 def discrete_distance(x_0,y_0,x_1,y_1):
     return sqrt((x_0 - x_1)**2 + (y_0 - y_1)**2)
@@ -49,6 +51,7 @@ class StateMannager:
     
     def __init__(self, map, agents_units_positions):
         self.map : matrix = map
+        self.not_move_log = []
         self.agents = []
         self.move_notifications = []
         self.swap_notifications = []
@@ -59,7 +62,7 @@ class StateMannager:
             for unit,position in units:
                 connector = self.create_connector(ag,unit,position)
                 ag.connect(connector)
-                map[position].set_unit(connector)
+                map[position].unit = connector
 
 
     def create_connector(self,agent,unit:Unit,position):
@@ -84,93 +87,179 @@ class StateMannager:
 
     def __exec_actions(self):
         log = []
-        self.exec_move(log)
+        self.exec_move(log,self.not_move_log)
         self.exec_swap(log)
         self.exec_attack(log)
+        #Pasando los movimientos que fueron invalidados
+        ia_list = []
+        connectors_by_ia = []
+        for connector, num_dir in  self.not_move_log:
+            index = -1
+            for i in range(len(ia_list)):
+                if(ia_list[i] == connector.ia):
+                    index = i
+                    break
+            if index == -1:
+                ia_list.append(connector.ia)
+                connectors_by_ia.append([(connector,int_to_direction(num_dir))])
+            else:
+                connectors_by_ia[index].append((connector,int_to_direction(num_dir)))
+        for i in range(len(ia_list)):
+            ia_list[i].METODODEALEEE(connectors_by_ia[i])
+        
         self.move_notifications = []
         self.attack_notifications = []
         self.swap_notifications = []
         return log
 
-    def exec_move(self,log):
-        collisions = dict()
-        end_movements = []
-        for connector, num_dir in self.move_notifications:
-            if(not connector.prev_dir or direction_to_int(connector.prev_dir) != num_dir or connector.state != STATES.Moving):
+    def not_move_subtree(self,node, not_move_log):
+        connector, num_dir, _ = self.node.state
+        self.map[connector.get_positions()] = connector
+        not_move_log.append((connector,num_dir))
+        for child in node.actions:
+            self.not_move_subtree(child,not_move_log)
+    
+    def move_connector(self,connector,num_dir, move_log):
+        i, j = connector.get_position()
+        move_log.append((i,j))
+        new_i = i + I_DIR[num_dir]
+        new_j = j + I_DIR[num_dir]
+        move_log.append((new_i,new_j))
+        self.map[i,j].unit = None
+        self.map[new_i,new_j] = connector
+        connector.update_position(new_i,new_j)
+        return new_i, new_j
+
+    def resolve_move_dependencies(self,node,not_move_log, move_log):
+        if(not node.actions):
+            return
+        if(len(node.actions) == 1):
+            self.move_connector(node.actions[0].state[0],node.actions[0].state[1],move_log)
+            self.resolve_move_dependencies(node.actions[0],not_move_log,move_log)
+            return
+        
+        total = sum([child.state[0].unit.get_move_cost for child in node.actions])
+        ran = randint(1,total)
+        founded = False
+        for child in node.actions:
+            ran -= child.state[0].unit.get_move_cost
+            if(not founded and ran <= 0):
+                self.move_connector(child.state[0],child.state[1],move_log)
+                self.resolve_move_dependencies(child,not_move_log,move_log)
+                founded = True
+            else:
+                self.not_move_subtree(child,not_move_log)
+
+    def resolve_cycle(self,node: Node,move_log:list):
+        if(node.actions[0].state[2] == -1):
+            return
+        self.move_connector(node.actions[0].state[0],node.actions[0].state[1],move_log)
+        node.state[2] = -1
+        self.resolve_cycle(node.actions[0],move_log)
+
+    def exec_move(self,move_log,not_move_log):
+        #Actualizando los timers
+        for index in range(len(self.move_notifications)):
+            connector, num_dir = self.move_notifications[index]
+            if(not connector.prev_dir or connector.prev_dir != num_dir or connector.state != STATES.Moving):
                 connector.timer = connector.unit.get_move_cost
-                connector.prev_dir = int_to_direction(num_dir)
+                connector.prev_dir = num_dir
                 connector.state = STATES.Moving
             connector.timer -= 1
-            if(connector.timer == 0):
-                i, j = connector.get_position()
+            if(connector.timer == 0): # Marcando los que se tienen que mover
+                self.map[connector.get_position()] = Node((connector,num_dir,-1),[])
+                moved_nodes.append(index)
+        resolve_roots = []
+        moved_nodes = []
+        node_states = []
+        resolve_cycles = []
+        #Añadiendo aristas y podando nodos
+        for index in moved_nodes:
+            connector, num_dir = self.move_notifications[index]
+            i, j = connector.get_position()
+            if self.map[i,j].unit.state[2] != -1:
+                continue
+            self.map[i,j].unit.state = (connector,num_dir,len(node_states))
+            node_states.append(NodeState(False,False))
+            while True:
                 new_i = i + I_DIR[num_dir]
                 new_j = j + J_DIR[num_dir]
-                end_movements.append(connector)
                 if self.map[new_i,new_j].is_empty:
-                    self.map[i,j].set_unit()
-                    self.map[new_i,new_j].set_unit(connector)
-                    log.append(self.map[i,j])
-                    log.append(self.map[new_i,new_j])
-                    connector.update_position((new_i,new_j))
-                else:
-                    arr = collisions.get((new_i,new_j))
-                    if arr:
-                        arr.append(connector)
-                    else:
-                        collisions[(new_i,new_j)] = [self.map[new_i,new_j].get_unit,connector]
-
-        for pos, connector_list in [(pos, connector) for pos, connector in collisions.items() if self.map[pos].get_unit]:
-            ran = randint(1,sum([con.unit.get_move_cost for con in connector_list])) 
-            for con in connector_list:
-                ran -= con.unit.get_move_cost
-                if ran <= 0:
-                    if(con.get_position() != pos):
-                        #poner al que se había usado para marcar a su posicion original
-                        old_con = self.map[pos].get_unit
-                        self.map[pos].set_unit()
-                        old_i = pos[0] + I_DIR[(direction_to_int(old_con.prev_dir) + 4)%4]
-                        old_j = pos[1] + J_DIR[(direction_to_int(old_con.prev_dir) + 4)%4]
-                        self.map[(old_i,old_j)].set_unit(old_con)
-                        #poner al que es en su posicion correcta
-                        self.map[con.get_position()].set_unit()
-                        self.map[pos].set_unit(connector)
-                        log.append(self.map[i,j])
-                        log.append(self.map[new_i,new_j])
-                        connector.update_position((new_i,new_j))
+                    self.map[new_i,new_j].unit = Node("Root",[(self.map[i,j].unit)])
+                    node_states[self.map[i,j].unit.states[2]].visited = True
+                    resolve_roots.append(self.map[new_i,new_j].unit)
                     break
+                else:
+                    current_node = self.map[i,j].unit
+                    next_node = self.map[new_i,new_j].unit
+                    # Si se mueve a un nodo que no se mueve en ese turno
+                    if(not (type(next_node) is Node)):
+                        self.not_move_subtree(current_node,not_move_log)
+                        continue
+                    # Si se mueve en direccion contraria a la que se mueve otro adyacente
+                    if(abs(next_node.state[0].prev_dir - current_node.state[0].prev_dir) == 4):
+                        self.not_move_subtree(current_node,not_move_log)
+                        self.not_move_subtree(next_node,not_move_log)
+                        continue
+                    elif(next_node.state[2] == -1):
+                        next_node.state[2] = current_node.state[2]
+                        i, j = next_node.state[0].get_position()
+                        num_dir = next_node.state[1]
+                        next_node.actions.append(current_node)
+                        continue
+                    elif(node_states[next_node.state[2]].visited):
+                        #
+                        if(node_states[next_node.state[2]].is_cycle):
+                            self.not_move_subtree(current_node,not_move_log)
+                            continue
+                        else:
+                            node_states[current_node.state[2]].visited = True
+                            next_node.actions.append(current_node)
+                            continue
+                    else:
+                        if(next_node.actions):
+                            self.not_move_subtree(next_node.actions[0])
+                            next_node.actions = []
+                        next_node.actions.appened(current_node)
+                        node_states[current_node.states[2]].visited = True
+                        node_states[current_node.states[2]].is_cycle = True
+                        resolve_cycles.append(current_node)
+                        #self.map[new_i,new_j].unit.actions.append(self.map[i,j].unit)
+        
+        #Resolver arbol de dependencias
+        for root in  resolve_roots:
+            self.resolve_move_dependencies(root,not_move_log,move_log)
 
+        for cycle in resolve_cycles:
+            self.resolve_cycle(cycle,move_log)
 
-        for end_mov_connector in end_movements:
+        for end_mov_connector in moved_nodes:
             end_mov_connector.state = STATES.Stand
             connector.prev_dir = None
+            end_mov_connector.timer = 0
     
-    def exec_swap(self, log):
+    def exec_swap(self, move_log):
         for connector,other_connector, num_dir in self.swap_notifications:
-            i, j = connector.get_position()
-            new_i = i + I_DIR[num_dir]
-            new_j = j + J_DIR[num_dir]
             #Si el otro participante del swap no está en Stand cancelar el swap
             if(other_connector.state != STATES.Stand):
                 self.notify_not_swap(connector)
                 continue
             #Si está iniciando el swap o cambió de dirección o objetivo
             if(not connector.prev_dir or not connector.prev_connector_to_swap or connector.state != STATES.Swaping
-            or direction_to_int(connector.prev_dir) != num_dir or (connector.prev_connector_to_swap and connector.prev_connector_to_swap != other_connector)):
+            or connector.prev_dir != num_dir or (connector.prev_connector_to_swap and connector.prev_connector_to_swap != other_connector)):
                 connector.timer = max(connector.unit.get_move_cost,other_connector.unit.get_move_cost)
                 connector.prev_connector_to_swap = other_connector
                 connector.state = STATES.Stand
                 connector.prev_dir = num_dir
             connector.timer -= 1
             if(connector.timer == 1):
-                self.map[connector.get_position()].set_unit()
-                self.map[other_connector.get_position()].set_unit()
-                self.map[connector.get_position()].set_unit(other_connector)
-                self.map[other_connector.get_position()].set_unit(connector)
+                self.map[connector.get_position()].unit = other_connector
+                self.map[other_connector.get_position()].unit = connector
                 original_pos = connector.get_position()
                 connector.update_position(original_pos)
                 other_connector.update_position(connector)
-                log.append(connector.get_position())
-                log.append(other_connector.get_position())
+                move_log.append(connector.get_position())
+                move_log.append(other_connector.get_position())
     
     def exec_attack(self,log):
         for connector, pos_i, pos_j in self.attack_notifications:
@@ -194,18 +283,24 @@ class StateMannager:
         height, width = self.map.shape
         if not validMove(new_i, new_j, height, width): return False
         cell_to_move = self.map[new_i,new_j]
-        return cell_to_move.crossable(connector.unit) and not cell_to_move.get_unit
-        
+        return cell_to_move.crossable(connector.unit) and (not cell_to_move.unit or cell_to_move.unit.timer == (cell_to_move.unit.get_move_cost - 1))        
     
     def notify_move(self, connector : Connector, direction):
         num_dir = direction_to_int(direction)
         if self.is_valid_move(connector,num_dir):
             self.move_notifications.append((connector,num_dir))
+        else:
+            self.not_move_log.append((connector,direction))
+
 
     def notify_not_move(self,connector : Connector):
         connector.state = STATES.Stand
         connector.prev_dir = None
         connector.timer = 0
+        for i in range(len(self.move_notifications)):
+            if(self.move_notifications[i][0] == connector):
+                self.move_notifications.pop(i)
+                break
 
     def notify_swap(self,connector,direction):
         num_direction = direction_to_int(direction)
@@ -217,6 +312,8 @@ class StateMannager:
             other_connector = self.map[i + I_DIR[num_direction] , j + J_DIR[num_direction]].get_connector()
             if( other_connector and other_connector.agent == connector.agent):
                 self.swap_notifications.append((connector,other_connector,num_direction))
+                return
+            
 
     def notify_not_swap(self,connector:Connector):
         connector.timer = 0
@@ -229,10 +326,14 @@ class StateMannager:
         height, width = self.map.shape()
         if(pos_i < height and pos_j < width and discrete_distance(i,j,pos_i,pos_j) <= connector.get_attack_range):
             self.attack_notifications.append((connector,pos_i,pos_j))
-    
+
 
     
-
+class NodeState:
+    def __init__(self,visited = False, is_cycle = False):
+        self.visited = visited
+        self.is_cycle = is_cycle
+        
      
-    
+
     

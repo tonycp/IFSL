@@ -1,20 +1,12 @@
 class Cell:
     def  __init__(self, location) -> None:
         self.location = location
-        self.__unit = None
+        self.unit = None
 
-    def set_unit(self, unit = None) -> bool:
-        if unit is not None and not self.is_empty: return False
-        self.__unit = unit
-        return True
-
-    @property
-    def get_unit(self):
-        return self.__unit
 
     @property
     def is_empty(self) -> bool:
-        return self.__unit is None
+        return self.unit is None
     
     def crossable(self, unit): # que la unidad tenga una propiedad para saber si puede o no pasar segun la profundidad
         return True
