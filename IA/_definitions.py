@@ -277,7 +277,7 @@ class CSP_UncrossedAsignment(CSP):
                 return variable 
         return None
     
-    def segment_interception(self,x1,x2,x3,x4,y1,y2,y3,y4):
+    def segment_interception(x1,x2,x3,x4,y1,y2,y3,y4):
         return CSP_UncrossedAsignment.intersect(x1,x2,x3,x4,y1,y2,y3,y4) and CSP_UncrossedAsignment.intersect(x3,x4,x1,x2,y3,y4,y1,y2)
 
     def is_valid_current_asign(self, domain_value, unasigned_variable,asignment):
@@ -333,18 +333,18 @@ class CSP_UncrossedAsignmentTime(CSP_UncrossedAsignment):
     def __init__(self, domain, variables, **kwds):
         CSP_UncrossedAsignment.__init__(self, domain, variables, **kwds)
     
-    def segment_interception(self, x1, x2, x3, x4, y1, y2, y3, y4):
+    def segment_interception(x1, x2, x3, x4, y1, y2, y3, y4):
         
-        if not CSP_UncrossedAsignment.segment_interception(self,x1, x2, x3, x4, y1, y2, y3, y4): return False
+        if not CSP_UncrossedAsignment.segment_interception(x1, x2, x3, x4, y1, y2, y3, y4): return False
 
         #si el origen de cada conector es igual a su destino, son dos puntos y no se cruzan
         if (x1,y1)==(x2,y2) and (x3,y3) == (x4,y4): return False
         elif (x1,y1)==(x2,y2) or (x3,y3) == (x4,y4): #Si al menos un conector esta n su destino basa con ver que no este en medio del camino del otro
-            return not (self.colinear_valid(x1,x2,x3,x4) or self.colinear_valid(y1,y2,y3,y4))
+            return not (CSP_UncrossedAsignmentTime.colinear_valid(x1,x2,x3,x4) or CSP_UncrossedAsignmentTime.colinear_valid(y1,y2,y3,y4))
 
 
         if x1==x2 and x3==x4: #Si son dos rectas veticales se busca condicion de cruce en una linea en el plano rotado
-            return not self.colinear_valid(y1,y2,y3,y4)
+            return not CSP_UncrossedAsignmentTime.colinear_valid(y1,y2,y3,y4)
         
         if x1 == x2: 
             m2 = (y3-y4)/(x3-x4)
@@ -366,7 +366,7 @@ class CSP_UncrossedAsignmentTime(CSP_UncrossedAsignment):
             m2 = (y3-y4)/(x3-x4)
 
             if m1==m2:
-                return not self.colinear_valid(x1, x2, x3, x4)
+                return not CSP_UncrossedAsignmentTime.colinear_valid(x1, x2, x3, x4)
             
             n1 = y1 - m1*x1
             n2 = y3 - m2*x3 
@@ -379,9 +379,26 @@ class CSP_UncrossedAsignmentTime(CSP_UncrossedAsignment):
                             (x,y) != (x1,y1) and (x,y) != (x3,y3) and abs(norma2((x,y),(x2,y2)) - norma2((x,y), (x4,y4))) <= 1)
 
     
-    def colinear_valid(self,p1, c1, p2, c2):
-        f = lambda p1,c1,p2,c2 :(p1<= c1 and c1<p2 and c1< c2) or p1< p2< c1< c2  
+    def colinear_valid(p1, c1, p2, c2):
+        f = lambda p1,c1,p2,c2 :(p1<= c1 and c1<=p2 and c1< c2) or p1< p2< c1< c2  
         return  f(p1,c1,p2,c2) or f(p2,c2,p1,c1) or f(c1,p1,c2,p2) or f(c2,p2,c1,p1)
+
+ 
+def evaluate_HillClimbingAsignment(connectors, goals):
+    cost = np.ndarray(shape = (1,len(goals)), dtype=float)
+    for i in range(0,len(goals)):
+        (x1,y1) = goals[i]
+        (x2,y2) = connectors[i].get_position()
+        cost[i] += norma2((x1,y1),(x2,y2))
+        for j in range(j,len(goals)):
+            (x3,y3) = goals[i]
+            (x4,y4) = connectors[i].get_position()
+            if CSP_UncrossedAsignmentTime.intersect(x1,x2,x3,x4,y1,y2,y3,y4):
+                cost[i]+=1
+                cost[j]+=1
+    return max(cost)
+            
+
 
     
 #!###############################################################################################
