@@ -90,13 +90,23 @@ class MediumAgentFigth:
         self.oponents = oponents
         self.stategie = FigthGame()
         self.current_actions = []
+        self.availables = agents
         
-    def asign_figters(self):
+    def asign_figters(self, available_agents, oponents):
         pass 
+    
+    def _end_task(self, agent):
+        self.available.append(agent)
+        
+        
+    def _is_invalid(self, agent):
+        pass
 
+    def _solve_invalid():
+        pass
     
     def figth_in_formation(self):
-        recalc = self.asign_figters()
+        recalc = self.asign_figters(self.available, self.oponents)
         bussy = {}
         best_move = {}
         attacks = []
@@ -119,6 +129,7 @@ class MediumAgentFigth:
                 attacks.append((x,action[1]))
         self.set_actions(best_move, attacks)
         self.eject_actions()
+    
                 
                 
     def set_actions(self, moves, attacks):
@@ -132,7 +143,7 @@ class MediumAgentFigth:
             agent.eject_action()   
     
     def inform_figth():
-        pass 
+        pass  
     
     def inform_view():
         pass
