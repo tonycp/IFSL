@@ -1,4 +1,7 @@
 class HighAgent:
+    def __init__(self, formations):
+        self.formations = formations 
+        
     
     def get_view():
         pass 
@@ -7,12 +10,13 @@ class HighAgent:
         pass
     
     def get_attack_information():
+        
         pass 
     
-    def set_attack():
+    def set_move(self, formation):
         pass
     
-    def set_figth():
+    def set_figth(self, formation):
         pass
     
      
