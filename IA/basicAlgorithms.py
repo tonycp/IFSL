@@ -1,4 +1,4 @@
-from itertools import chain
+from itertools import accumulate, chain
 from queue import PriorityQueue
 from ._definitions import *
 import entities.utils as util
@@ -168,6 +168,47 @@ def whcastar_search(goals: list[(tuple, tuple)], rrastar_list: list[RRAstar], ro
         for cell in path:
             reservation_table[cell] = connector
     return paths
+
+def slice(roadmap, start_poss, width, height, color):
+    slice_map = np.ndarray(shape=(width, height))
+    node_path = NodeTree(state=(get_first_path(), 1))
+    slice_paths = []
+    actual_slice_paths = [(node_path, node_path)]
+    for j in range(width):
+        actual_slice, i = 0
+        actual_up, actual_down = actual_slice_paths[actual_slice]
+        cell = actual_up.state[1]
+        while i < height:
+            x, y = start_poss
+            dx, dy = x + i, y + j
+            if roadmap.color[dx, dy] not in color:
+                continue
+            if roadmap.distance[dx, dy] != 0:
+                slice_map[dx, dy] = cell
+                continue
+            if norma_inf() <= 1:
+                actual_down = NodeTree(state=((dx, dy), actual_down.state[1]), parent=actual_down)
+                actual_slice += 1 # se va
+                actual_up, actual_down = actual_slice_paths[actual_slice]
+                i = jump_obstacles(roadmap, dx, dy, height, color)
+                actual_up = NodeTree(state=((x + i, dy), actual_down.state[1]), parent=actual_down)
+                cell = actual_up.state[1]
+            else:
+                
+                pass
+            i += 1
+
+def norma_inf(a, b):
+    dist = -inf
+    for i in range(a):
+        dist = max(abs(a[i] - b[i]), dist)
+    return dist
+
+def jump_obstacles(roadmap, x, y, height, color):
+    i = x
+    while i < height and (roadmap.distance[i, y] == 0 or roadmap.color[i, y] not in color):
+        i += 1
+    return i - 1
 
 #*Clase que maneja todo lo relacionado con el roadmap basado en el diagrama Voronoi
 class RoadMap:
