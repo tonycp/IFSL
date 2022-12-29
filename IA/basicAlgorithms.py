@@ -387,3 +387,4 @@ def DFS(obstacles, distance):
             internalDFS((i, j, _), visited, [color])
 
     return visited
+
