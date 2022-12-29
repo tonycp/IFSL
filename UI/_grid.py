@@ -1,6 +1,7 @@
 from typing import Union
 import numpy as np
-from pygame import Rect, Surface, Color
+from pygame import Rect, Surface, Color, image
+from pygame.transform import scale
 from entities import Cell, MountainCell, RiverCell, RoadCell, WallCell, GrassCell, Singleton
 
 
@@ -69,11 +70,11 @@ class GrassSurface(SprintSurface, metaclass=Singleton):
         return SprintSurface.__init__(self, source, *args, **kwargs)
 
 
-def get_sprint(scale: tuple[int, int], Cell: Cell, source: Union[Color, Surface] = None) -> Surface:
+def get_sprint(newscale: tuple[int, int], Cell: Cell, source: Union[Color, Surface] = None) -> Surface:
     """
     dado un tipo de Celda retorna su representante en sprint
 
-    scale -> escala del screen,
+    newscale -> escala del screen,
     Cell -> Celda a convertir en sprint,
     source -> representación de la Celda
 
@@ -82,20 +83,24 @@ def get_sprint(scale: tuple[int, int], Cell: Cell, source: Union[Color, Surface]
     if Cell.is_empty:
         source = source if source is not None else default[type(Cell).__name__]
         if (type(Cell) is MountainCell):
-            return MountainSurface(source, scale)
+            return MountainSurface(source, newscale)
         elif (type(Cell) is RiverCell):
-            return RiverSurface(source, scale)
+            return RiverSurface(source, newscale)
         elif (type(Cell) is RoadCell):
-            return RoadSurface(source, scale)
+            return RoadSurface(source, newscale)
         elif (type(Cell) is WallCell):
-            return WallSurface(source, scale)
+            return WallSurface(source, newscale)
         elif (type(Cell) is GrassCell):
-            return GrassSurface(source, scale)
+            return GrassSurface(source, newscale)
         else:
             raise NotImplementedError("Cell type indefinido")
     else:
         source = source if source is not None else default[f'Team-{Cell.unit.agent.id}']
-        return SprintSurface(source, scale)
+        surface = SprintSurface(source, newscale)
+        num = image.load(f".\\contents\\Numbers\\Number{repr(Cell.unit)}.png").convert_alpha()
+        x, y = surface.get_size()
+        surface.blit(scale(num, (x*3/4, y*3/4)), (x/8, y/8))
+        return surface
 
 
 def transform( sprint: Surface, 

@@ -31,20 +31,20 @@ class Formation:
                 for n in self.relations.keys(): 
                     x, y =self.relations[n]
                     (nsx,nsy),(ewx,ewy) = Formation.FormationNode.get_directions(x,y, rot_times)
-                    updates[n] = (nsx*x + xp) + y*ewx , (nsy*x + yp) + y*ewy 
-                    self.relations[n] = nsx*x  + y*ewx, nsy*x  + y*ewy 
+                    updates.append((n,((nsx*abs(x) + xp) + abs(y)*ewx , (nsy*abs(x) + yp) + abs(y)*ewy)))
+                    self.relations[n] = nsx*abs(x)  + abs(y)*ewx, nsy*abs(x)  + abs(y)*ewy 
 
         def get_directions(s1,s2,rot):
-            ns = None
-            ew = None
+            ns = (0,0)
+            ew = (0,0)
             if s1 >0:
-                ns = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.S) + rot))%7)
-            else:
-                ns = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.N) + rot)%7))
-            if s2 >0:
-                ew = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.E) + rot))%7)
-            else:
-                ex = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.W) + rot)%7))
+                ns = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.S) + rot)%8))
+            elif s1<0:
+                ns = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.N) + rot)%8))
+            if s2 > 0:
+                ew = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.E) + rot)%8))
+            elif s2<0:
+                ew = direction_to_tuple(int_to_direction(abs(direction_to_int(DIRECTIONS.W) + rot)%8))
             return ns, ew
         
     def __init__(self, nodeN: int, edges:dict, relative_positions:dict, main:int = 0, main_position = None, direction = DIRECTIONS.N):
@@ -71,14 +71,11 @@ class Formation:
     def rotate(self, angle: int):
         rot_times = angle - direction_to_int(self.dir) 
         self.dir = int_to_direction(angle)
-        updates = {}
+        updates = []
         self.nodes[self.main].rotate(rot_times,self.nodes[self.main].position, updates)
-        for key in updates.keys():
-            pos = updates.pop(key)
+        for key, pos in updates:
             self.nodes[key].rotate(rot_times,pos,updates)
             
-            
-
 
 class TwoRowsFormation(Formation):
     

@@ -87,6 +87,15 @@ class FindVoronoiVertex(FindVertex):
         return [(name, move) for name, move in FindVertex.actions(self, state) 
                             if len(set(self.roadmap.color[x + move[0], y + move[1]]).intersection(self.roadmap.color[x, y])) > 0]
 
+class SliceProblem(FindVertex):
+    def __init__(self, colors, *args, **kwargs):
+        self.colors = colors
+        FindVertex.__init__(self, *args, **kwargs)
+
+    def actions(self, state):
+        x, y = state
+        return [(name, move) for name, move in FindVertex.actions(self, state) 
+                            if len(set(self.roadmap.color[x + move[0], y + move[1]]).intersection(self.colors)) > 0]
 
 class MoveVoronoiProblem(Problem):
     def __init__(self, start_costs, end_cost, start_end, roadmap, *args, **kwargs):

@@ -187,6 +187,8 @@ class ForamtionMoveControl_IA(object):
             self.time_waited = 0 
             self.result = self.ia.get_move_for(self.fake_main)
             if not self.result:
+                if self.result == None:
+                    self.rotate_formation(5)
                 return
             next_x, next_y = self.result.pop(0)
             x, y = self.formation_shape.nodes[self.formation_shape.main].position
@@ -201,25 +203,34 @@ class ForamtionMoveControl_IA(object):
                 for conector, direct in invalidated:
                     conector.notify_move(conector, direct) 
                     self.time_to_wait = max(self.time_to_wait, conector.unit.get_move_cost)
+
+
+
     
     def go_to_formation(self):
-            from_to = [(connect, self.formation_shape.nodes[form_n].position) for connect, form_n in self.asignment.items()]
-            all_goals = list(map(lambda x: x[0].get_position() != x[1], from_to))
-            self.positioned = not any(all_goals)
-            if not self.positioned and (self.result is None or not len(self.result[from_to[0][0]])):
-                self.result = whcastar_search(goals=from_to, roadmap=self.roadmap, rrastar_list=self.rrastar_list, w=8)
+        from_to = [(connect, self.formation_shape.nodes[form_n].position) for connect, form_n in self.asignment.items()]
+        all_goals = list(map(lambda x: x[0].get_position() != x[1], from_to))
+        self.positioned = not any(all_goals)
+        if not self.positioned and (self.result is None or not len(self.result[from_to[0][0]])):
+            self.result = whcastar_search(goals=from_to, roadmap=self.roadmap, rrastar_list=self.rrastar_list, w=8)
             
-            elif not self.positioned:
-                for key, path in self.result.items():
-                    if(key.state == STATES.Stand):
-                        (next_x, next_y), _ = path.pop(0)
-                        move = next_x - key.get_position()[0], next_y - key.get_position()[1]
-                        if move == (0, 0):
-                            continue
-                        dir = dir_tuple[move]
-                        key.notify_move(key, dir)             
+        elif not self.positioned:
+            for key, path in self.result.items():
+                if(key.state == STATES.Stand):
+                    (next_x, next_y), _ = path.pop(0)
+                    move = next_x - key.get_position()[0], next_y - key.get_position()[1]
+                    if move == (0, 0):
+                        continue
+                    dir = dir_tuple[move]
+                    key.notify_move(key, dir)             
     
-    
+    def rotate_formation(self, direction):
+        self.positioned = False
+        self.rrastar_list = numpy.ndarray(shape=(len(self.conectors)), dtype=RRAstar)
+        self.formation_shape.rotate(direction)
+        self.go_to_formation()
+
+
     def notify_move(self, direction):
         self.formation_shape.move(*direction)
         i, j = self.fake_main.get_position()

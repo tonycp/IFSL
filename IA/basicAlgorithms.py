@@ -150,7 +150,6 @@ def add_edge(n, reservation_table: dict, rrastar_instance: RRAstar, w):
         current_node = NodeTree(state=state, parent=current_node, path_cost=current_node.path_cost + 1)
     return [current_node]
 
-# (1, 2), 3
 def whcastar_search(goals: list[(tuple, tuple)], rrastar_list: list[RRAstar], roadmap, w: int):
     reservation_table = {}
 
