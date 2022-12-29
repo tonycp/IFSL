@@ -27,7 +27,9 @@ class BasicAgent:
          
     def get_position(self):
         return self.connector.get_position()
-           
+    
+    def get_move_cost(self):
+        return self.connector.unit.move_cost       
           
     def eject_action(self):
         """ejecutar una accion por el conector"""
