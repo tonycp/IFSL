@@ -5,6 +5,7 @@ from entities.utils import DIRECTIONS, STATES, dir_tuple
 from low_layer import BasicAgent
 import numpy as np
 
+
 class MediumAgentMove:
     def __init__(self) -> None:
         self.formation: Formation
