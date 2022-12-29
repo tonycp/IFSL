@@ -407,7 +407,7 @@ def evaluate_HillClimbingAsignment(csp, connectors, goals, alpha = 1):
 
     
 #!###############################################################################################
-#!                                    ExpectedMiniMax                                           #
+#!                                            MiniMax                                           #
 #!###############################################################################################  
 
 infinity = math.inf
@@ -433,8 +433,6 @@ class Game:
     def undo(self,state, action):raise NotImplementedError
         
 class FigthGame(Game):
-    def __init__(self, map_copy, player1, player2):
-        self.initial = State(map_copy, player1,player2)
     
     def actions(self, state):
         player = state.to_move
@@ -448,8 +446,8 @@ class FigthGame(Game):
         for z in range(0,len(I_DIR)):
             i = I_DIR[z]
             j = J_DIR[z]
-            if(validMove(x+i,y+j,map.shape[0], map.shape[1]) and (map[x+i,y+j].is_empty or player1["pos"][0] == (x+i,y+j))):
-                    actions.append(("move_to",x+i,(y+j)))
+            if((x+i,y+j) not in state.bussy and validMove(x+i,y+j,map.shape[0], map.shape[1]) and (map[x+i,y+j].is_empty or player1["pos"][0] == (x+i,y+j))):
+                    actions.append(("move",x+i,(y+j)))
         x2,y2 = player2["pos"][-1]
         if norma2((x,y),(x2,y2)) < player1["attack"]:
             actions.append(("attack", (x2,y2)))
@@ -463,7 +461,7 @@ class FigthGame(Game):
             player1, player2 = player2,player1
         
         action, direction = move 
-        if action == "move_to":
+        if action == "move":
             player1["pos"].append(direction)
         elif action == "attack":
             times = 0
@@ -513,7 +511,7 @@ class FigthGame(Game):
                       
 class State(defaultdict):
     
-    def __init__(self, map, connector1, connector2, **kwds):
+    def __init__(self, map, connector1, connector2, bussy =None, **kwds):
         self.p1 ={} 
         self.p1["id"] = connector1.__id
         self.p1["attack"] = connector1.unit.get_attack_range
@@ -534,6 +532,7 @@ class State(defaultdict):
         self.p2["pos"] = [connector2.get_position()] 
         
         self.to_move = connector1.__id
+        self.bussy =bussy
         self.map = map
             
     
@@ -548,7 +547,7 @@ def h_alphabeta_search_solution(game, state, cutoff, h):
         v, move = -infinity, None
         for a in game.actions(state):
             v2, _ = min_value(game.result(state, a), alpha, beta, depth+1)
-            game.undo()
+            game.undo(a,state)
             if v2 > v:
                 v, move = v2, a
                 alpha = max(alpha, v)
@@ -564,7 +563,7 @@ def h_alphabeta_search_solution(game, state, cutoff, h):
         v, move = +infinity, None
         for a in game.actions(state):
             v2, _ = max_value(game.result(state, a), alpha, beta, depth + 1)
-            game.undo()
+            game.undo(a,state)
             if v2 < v:
                 v, move = v2, a
                 beta = min(beta, v)
