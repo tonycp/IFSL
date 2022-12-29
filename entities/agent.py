@@ -4,7 +4,7 @@ from ._units import Knight
 from random import randint
 from .utils import int_to_direction, DIRECTIONS, STATES, I_DIR, J_DIR, norma2
 from IA.basicAlgorithms import RRAstar, astar_search_problem, RoadMap, breadth_first_search_problem, best_first_search, whcastar_search
-from IA._definitions import NodeTree, MoveVoronoiProblem, FindVoronoiVertex, path_states, expand
+from IA._definitions import NodeTree, MoveVoronoiProblem, FindVoronoiVertex, path_states, expand, CSP_UncrossedAsignmentTime
 from IA.formations import *
 import numpy
 
@@ -154,7 +154,7 @@ class ForamtionMoveControl_IA(object):
         self.formation_shape = formation_shape
         self.conectors = conectors
         self.direction = DIRECTIONS.N
-        self.asignment ={}
+        self.from_to = None
         self.ia = moveIA()
         self.roadmap = roadmap
         self.time_to_wait = max([conector.unit.get_move_cost for conector in conectors.values()])
@@ -162,22 +162,32 @@ class ForamtionMoveControl_IA(object):
         self.goal = goal
         self.positioned = False
         self.result = None
-        index = 0
+        # index = 0
         self.rrastar_list = numpy.ndarray(shape=(len(conectors)), dtype=RRAstar)
            
         if main_position and formation_shape.nodes[formation_shape.main].position is None:
             formation_shape.set_in(*main_position)
-        for i in conectors.values():
-            if index == formation_shape.main: 
-                index+=1
-            self.asignment[i] = index
-            index+=1 
+        # for i in conectors.values():
+        #     if index == formation_shape.main: 
+        #         index+=1
+        #     self.asignment[i] = index
+        #     index+=1 
     
     def get_move(self, invalidated):
         if self.positioned:
             self.move_in_formation(invalidated)
-        else: 
+        else:
+            
             self.go_to_formation()
+
+    def asign_formation(self):
+        csp = CSP_UncrossedAsignmentTime([c for _,c in self.conectors.items()], [pos.position for pos in self.formation_shape.nodes if pos.state != self.formation_shape.main])
+        csp.back_track_solving()
+        if csp.asignment: 
+            from_to = [(y,x) for x,y in csp.asignment.items()]     
+        else:
+            from_to = [(c, self.formation_shape.nodes[id].position) for id ,c in self.conectors.items()]
+        return from_to
 
     def move_in_formation(self, invalidated):
         if self.ia.goal is None and self.goal is not None:
@@ -188,7 +198,7 @@ class ForamtionMoveControl_IA(object):
             self.result = self.ia.get_move_for(self.fake_main)
             if not self.result:
                 if self.result == None:
-                    self.rotate_formation(5)
+                    self.rotate_formation(4)
                 return
             next_x, next_y = self.result.pop(0)
             x, y = self.formation_shape.nodes[self.formation_shape.main].position
@@ -196,7 +206,7 @@ class ForamtionMoveControl_IA(object):
         
         else:
             self.time_waited +=1
-            for key in self.asignment.keys():
+            for _,key in self.conectors.items():
                 if(key.state != STATES.Stand and key.timer > 0):
                     key.notify_move(key, key.prev_dir) 
             if invalidated: 
@@ -208,11 +218,12 @@ class ForamtionMoveControl_IA(object):
 
     
     def go_to_formation(self):
-        from_to = [(connect, self.formation_shape.nodes[form_n].position) for connect, form_n in self.asignment.items()]
-        all_goals = list(map(lambda x: x[0].get_position() != x[1], from_to))
+        if not self.from_to:
+            self.from_to = self.asign_formation()
+        all_goals = list(map(lambda x: x[0].get_position() != x[1], self.from_to))
         self.positioned = not any(all_goals)
-        if not self.positioned and (self.result is None or not len(self.result[from_to[0][0]])):
-            self.result = whcastar_search(goals=from_to, roadmap=self.roadmap, rrastar_list=self.rrastar_list, w=8)
+        if not self.positioned and (self.result is None or not len(self.result[self.from_to[0][0]])):
+            self.result = whcastar_search(goals=self.from_to, roadmap=self.roadmap, rrastar_list=self.rrastar_list, w=8)
             
         elif not self.positioned:
             for key, path in self.result.items():
@@ -227,6 +238,7 @@ class ForamtionMoveControl_IA(object):
     def rotate_formation(self, direction):
         self.positioned = False
         self.rrastar_list = numpy.ndarray(shape=(len(self.conectors)), dtype=RRAstar)
+        self.from_to = None
         self.formation_shape.rotate(direction)
         self.go_to_formation()
 
@@ -236,7 +248,7 @@ class ForamtionMoveControl_IA(object):
         i, j = self.fake_main.get_position()
         newposs = i + direction[0], j + direction[1]
         self.fake_main.update_position(newposs)
-        for key in self.asignment.keys():
+        for _, key in self.conectors.items():
             if(key.state == STATES.Stand):
                 key.notify_move(key, dir_tuple[direction])
             elif(key.timer > 0):

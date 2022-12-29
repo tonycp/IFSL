@@ -7,6 +7,7 @@ from ._grid import get_grid, get_sprint, transform
 from entities.connector import StateMannager
 from entities.agent import *
 from entities._units import *
+from IA._definitions import *
 
 class Render:
     def __init__(self, condition, map: np.matrix = None, width: int = 800, height: int = 600) -> None:
@@ -23,16 +24,14 @@ class Render:
         self.map = map if map is not None else get_grid(width, height)
         agent, units = Agent(map, (7, 8)), [
             (Knight(), (0, 0)),
-            (Knight(), (int((map.shape[0] - 1) / 2), int((map.shape[1] - 1) / 2))),
-            (Knight(), (4, 7)),
-            (Knight(), (map.shape[0] - 1, 0)),
+            (Knight(), (0, 1)),
             (Knight(), (0, map.shape[1] - 1)),
             (Knight(), (map.shape[0] - 1,map.shape[1] - 1)),
             (Knight(), (8,9)),
             (Knight(), (7,8))
         ]
         self.last_state = StateMannager(self.map, [(agent, units)])
-        formation = TwoRowsFormation(8, (18, 8))
+        formation = TwoRowsFormation(6, (15, 8))
         agent.asign_to_formation(formation=formation, conectors=agent.connectors)
         
         self.__max_shape_size = max(self.map.shape[1], self.map.shape[0])
