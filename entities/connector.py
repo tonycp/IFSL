@@ -2,7 +2,7 @@ from cmath import sqrt
 from random import randint
 
 from matplotlib.pyplot import connect
-from ._units import Unit
+from ._units import *
 from .utils import STATES, direction_to_int, I_DIR, J_DIR, int_to_direction, validMove
 from IA.basicAlgorithms import *
 from IA._definitions import Node
@@ -55,7 +55,8 @@ class StateMannager:
             return str(self.__id)
     
     def __init__(self, map, agents_units_positions):
-        self.map : matrix = map
+        self.map = map
+        self.roadmap = RoadMap(map, Knight())
         self.not_move_log = []
         self.agents = []
         self.move_notifications = []
@@ -76,15 +77,15 @@ class StateMannager:
     def exec_round(self):
         # Pedir acciones a cada una de las IAs
         
-        reached = []
         for agent in self.agents:
-            #TODO Calcular vision para este agente
-            
-            #problem = FindVoronoiVertex([self.map[x.get_position()] for x in agent.connectors])
-            
-            # for state in problem.initial:
-            #     breadth_first_search(Node(state), lambda x: x.state.get_unit.agent.id != agent.id, reached, state.get_unit.get_vision_radio,lambda n: expand(problem, n) )
-            agent.decide(None)
+            reached = []
+            problem = ViewProblem(self.roadmap)
+            filter = lambda x: x.state.get_unit.agent.id != agent.id
+            adj = lambda x: expand(problem, x)
+
+            for state in [self.map[x.get_position()] for x in agent.connectors]:
+                breadth_first_search(Node(state), filter, reached, adj, state.get_unit.get_vision_radio)
+            agent.decide(reached)
             
         # Ejecutar las acciones
         log = self.__exec_actions()
