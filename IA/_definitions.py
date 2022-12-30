@@ -1,7 +1,9 @@
+from random import randint
 import numpy as np
 import math
-from entities.utils import DIRECTIONS, I_DIR, J_DIR, validMove, norma2
-
+from entities.utils import DIRECTIONS, I_DIR, J_DIR, validMove, norma2, validMove, int_to_direction
+from entities.connector import StateMannager as S
+from collections import defaultdict
 class Problem(object):
     """The abstract class for a formal problem. A new domain subclasses this,
     overriding `actions` and `results`, and perhaps other methods.
@@ -376,5 +378,153 @@ class CSP_UncrossedAsignmentTime(CSP_UncrossedAsignment):
         return  f(p1,c1,p2,c2) or f(p2,c2,p1,c1) or f(c1,p1,c2,p2) or f(c2,p2,c1,p1)
 
     
+#!###############################################################################################
+#!                                    ExpectedMiniMax                                           #
+#!###############################################################################################  
 
+infinity = math.inf
+  
+class Game:
+
+    def actions(self, state):
+        """Return a collection of the allowable moves from this state."""
+        raise NotImplementedError
+
+    def result(self, state, move):
+        """Return the state that results from making a move from a state."""
+        raise NotImplementedError
+
+    def is_terminal(self, state):
+        """Return True if this is a final state for the game."""
+        return not self.actions(state)
     
+    def utility(self, state, player):
+        """Return the value of this final state to player."""
+        raise NotImplementedError
+    
+    def undo(self,state):raise NotImplementedError
+        
+class FigthGame(Game):
+    def __init__(self, map_copy, player1, player2):
+        self.initial = State(map_copy, player1,player2)
+    
+    def actions(self, state):
+        player = state.to_move
+        player1 = state.p1
+        player2 = state.p2
+        if player == player2["id"]:
+            player1, player2 = player2,player1
+        actions =[]
+        x,y = player1["pos"][-1]
+        
+        for z in range(0,len(I_DIR)):
+            i = I_DIR[z]
+            j = J_DIR[z]
+            if(validMove(x+i,y+j,map.shape[0], map.shape[1]) and (map[x+i,y+j].is_empty or player1["pos"][0] == (x+i,y+j))):
+                    actions.append(("move_to",x+i,(y+j)))
+        x2,y2 = player2["pos"][-1]
+        if norma2((x,y),(x2,y2)) < player1["attack"]:
+            actions.append(("attack", (x2,y2)))
+        return actions
+    
+    def result(self, state, move):
+        player = state.to_move
+        player1 = state.p1
+        player2 = state.p2
+        if player == player2["id"]:
+            player1, player2 = player2,player1
+        
+        action, direction = move 
+        if action == "move_to":
+            player1["pos"].append(direction)
+        elif action == "attack":
+            times = 0
+            for i in range(0,200):
+                if randint(1,state.player1.move_cost + state.player2.move_cost) <= state.player2.move_cost:
+                    times+=1
+            player2["hp"].append(player2["hp"][-1] - state.player1.damage * times/200)
+        state.to_move = player2["id"]
+        return state
+            
+    def is_terminal(self, state):
+        return state.p1["hp"][-1] <= 0 or state.p2["hp"][-1] <= 0 
+    
+    def utility(self, state, player):
+        if self.is_terminal(state):
+            if state.p1["hp"][-1] <= 0 and state.p1["id"] == player:
+                return -1000
+            return 1000
+        return 0
+    
+    def heuristic(state, player):
+        player1 = state.p1
+        player2 = state.p2
+        if player == player2["id"]:
+            player1, player2 = player2,player1
+        
+        h = player1["hp"][-1]/ player2["hp"][-1]
+        if 
+            
+                        
+class State(defaultdict):
+    
+    def __init__(self, map, connector1, connector2, **kwds):
+        self.p1 ={} 
+        self.p1["id"] = connector1.__id
+        self.p1["attack"] = connector1.unit.get_attack_range
+        self.p1["hp"] = [connector1.get_health_points()]
+        self.p1["view"] =connector1.unit.get_vision_radio
+        self.p1["dmg"] = connector1.unit.get_damage
+        self.p1["move"] = connector1.unit.get_move_cost 
+        self.p1["pos"] = [connector1.get_position()] 
+        
+        
+        self.p2 ={} 
+        self.p2["id"] = connector2.__id
+        self.p2["attack"] = connector2.unit.get_attack_range
+        self.p2["hp"] = [connector2.get_health_points()]
+        self.p2["view"] =connector2.unit.get_vision_radio
+        self.p2["dmg"] = connector2.unit.get_damage
+        self.p2["move"] = connector2.unit.get_move_cost 
+        self.p2["pos"] = [connector2.get_position()] 
+        
+        self.to_move = connector1.__id
+        self.map = map
+            
+    
+def h_alphabeta_search_solution(game, state, cutoff, h):
+    player = state.to_move
+
+    def max_value(state, alpha, beta, depth):
+        if game.is_terminal(state):
+            return game.utility(state, player), None
+        if cutoff(game, state, depth):
+            return h(state, player), None
+        v, move = -infinity, None
+        for a in game.actions(state):
+            v2, _ = min_value(game.result(state, a), alpha, beta, depth+1)
+            game.undo()
+            if v2 > v:
+                v, move = v2, a
+                alpha = max(alpha, v)
+            if v >= beta:
+                return v, move
+        return v, move
+
+    def min_value(state, alpha, beta, depth):
+        if game.is_terminal(state):
+            return game.utility(state, player), None
+        if cutoff(game, state, depth):
+            return h(state, player), None
+        v, move = +infinity, None
+        for a in game.actions(state):
+            v2, _ = max_value(game.result(state, a), alpha, beta, depth + 1)
+            game.undo()
+            if v2 < v:
+                v, move = v2, a
+                beta = min(beta, v)
+            if v <= alpha:
+                return v, move
+        return v, move
+
+    return max_value(state, -infinity, +infinity, 0)
