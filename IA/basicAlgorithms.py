@@ -1,9 +1,27 @@
-from itertools import accumulate, chain
+from itertools import chain
 from queue import PriorityQueue
 from ._definitions import *
 import entities.utils as util
 import numpy as np
 from math import inf
+
+def hill_climbing(goals: list[tuple], cost, iter_count = 30):
+    best_sol = np.array(range(len(goals)))[np.random.choice(list(range(len(goals))), len(goals), replace = False)]
+    cost_sol = cost(best_sol)
+    change = True
+    count = 0
+
+    while(count < iter_count and change):
+        change = False
+        for i in range(len(best_sol)):
+            for j in range(1, len(best_sol)):
+                new_sol = best_sol.copy()
+                new_sol[i], new_sol[j] = best_sol[j], best_sol[i]
+                new_cost = cost(new_sol)
+                if cost_sol < new_cost:
+                    best_sol = new_sol
+                    cost_sol = new_cost
+                    change = True
 
 def breadth_first_search_problem(node: NodeTree, problem: Problem):
     filter = lambda n: problem.is_goal(n.state)
@@ -169,38 +187,112 @@ def whcastar_search(goals: list[(tuple, tuple)], rrastar_list: list[RRAstar], ro
             reservation_table[cell] = connector
     return paths
 
-def slice(roadmap, start_poss, width, height, color):
-    slice_map = np.ndarray(shape=(width, height))
-    node_path = NodeTree(state=(get_first_path(), 1))
-    slice_paths = []
-    actual_slice_paths = [(node_path, node_path)]
-    for j in range(width):
-        actual_slice, i = 0
-        actual_up, actual_down = actual_slice_paths[actual_slice]
-        cell = actual_up.state[1]
-        while i < height:
-            x, y = start_poss
-            dx, dy = x + i, y + j
-            if roadmap.color[dx, dy] not in color:
-                continue
-            if roadmap.distance[dx, dy] != 0:
-                slice_map[dx, dy] = cell
-                continue
-            if norma_inf() <= 1:
-                actual_down = NodeTree(state=((dx, dy), actual_down.state[1]), parent=actual_down)
-                actual_slice += 1 # se va
-                actual_up, actual_down = actual_slice_paths[actual_slice]
-                i = jump_obstacles(roadmap, dx, dy, height, color)
-                actual_up = NodeTree(state=((x + i, dy), actual_down.state[1]), parent=actual_down)
-                cell = actual_up.state[1]
-            else:
-                
-                pass
-            i += 1
+def slice(start_poss, width, height, filter, is_empty):
+    def get_connectivities(slice, filter, is_empty):
+        cell_parts = []
+        start = -1
+        for i, point in enumerate(slice):
+            if not filter(*point): continue
+            if not is_empty(*point) and start != -1:
+                cell_parts.append((start, i))
+                start = -1
+            elif is_empty(*point) and start == -1:
+                start = i
+        if start != -1:
+            cell_parts.append((start, len(slice)))
+        return cell_parts
+
+    def get_adjacency_matrix(left_parts, right_parts):
+        return np.array([[min(left_part[1], right_part[1]) - max(left_part[0], right_part[0]) > 0 
+                    for right_part in right_parts] 
+                        for left_part in left_parts])
+
+    decomposed = np.zeros(shape=(width, height), dtype = int) # black
+
+    last_cells = []
+    last_cell_parts = []
+    last_cell_len = total_cells = 0
+    cells_area = []
+    cells_adjacency = {}
+
+    dx, dy = start_poss
+    for y in range(height):
+        slice = [(dx + x, dy + y) for x in range(width)]
+        cell_parts = get_connectivities(slice, filter, is_empty)
+        cell_len = len(cell_parts)
+        current_cells = []
+
+        if last_cell_len == 0:    
+            for _ in cell_parts:
+                total_cells += 1
+                cells_area.append(0)
+                current_cells.append(total_cells)
+        elif cell_len != 0:
+            matrix = get_adjacency_matrix(last_cell_parts, cell_parts)
+            current_cells = [0] * len(cell_parts)
+
+            for i in range(last_cell_len):
+                connectivities = [j for j, condition in enumerate(matrix[i, :]) if condition]
+                connec_len = len(connectivities)
+                if connec_len == 1:
+                    current_cells[connectivities[0]] = last_cells[i]
+                elif connec_len > 1:
+                    for j in connectivities:
+                        i_adj, j_adj = cells_adjacency[i], cells_adjacency[j]
+                        
+                        if i_adj is None:
+                            cells_adjacency[i] = []
+                        if j_adj is None:
+                            cells_adjacency[j] = []
+                        
+                        i_adj.append(j)
+                        j_adj.append(i)
+
+                        total_cells += 1
+                        cells_area.append(0)
+                        current_cells[j] = total_cells
+
+            for j in range(cell_len):
+                connec_len = np.sum(matrix[:, j])
+                if connec_len > 1 or connec_len == 0:
+                    total_cells += 1
+                    cells_area.append(0)
+                    current_cells[j] = total_cells
+
+        for cell, slice in zip(current_cells, cell_parts):
+            decomposed[slice[0]: slice[1], y] = cell
+            cells_area[cell - 1] += slice[1] - slice[0]
+
+        last_cell_len = cell_len
+        last_cell_parts = cell_parts
+        last_cells = current_cells
+
+    adjacency_matrix = np.ndarray(shape=(len(cells_area), len(cells_area)), dtype=bool)
+
+    for i in range(len(cells_area)):
+        for j in cells_adjacency[i]:
+            adjacency_matrix[i, j] = True
+    
+    return cells_area, decomposed, adjacency_matrix
+
+def end_path(roadmap, x, y):
+    if roadmap.distance[x + 1, y] == 0 or roadmap.distance[x + 1, y + 1] == 0 or roadmap.distance[x + 1, y - 1] == 0:
+        return False
+    return True
+
+def update_slice(slice_map, cell_up, cell_down, num_area, parent_up = None, parent_down = None):
+    path_up = NodeTree(state=(cell_up, num_area), parent=parent_up)
+    path_down = NodeTree(state=(cell_down, num_area), parent=parent_down)
+    print_slice(cell_up, cell_down, slice_map, num_area)
+    return path_up, path_down
+
+def print_slice(a, b, slice_map, slice):
+    for i in range(a[0], b[0]):
+        slice_map[i, a[1]] = slice
 
 def norma_inf(a, b):
     dist = -inf
-    for i in range(a):
+    for i in range(len(a)):
         dist = max(abs(a[i] - b[i]), dist)
     return dist
 
@@ -215,7 +307,7 @@ class RoadMap:
     
     def __init__(self, worldMap, unit) -> None:
         self.unit = unit
-        self.vertex, self.distance, self.color, self.roads, self.areas, self.adjacents = RoadMap.RoadMapGVD(worldMap,unit)
+        self.vertex, self.distance, self.color, self.roads, self.areas, self.adjacents, self.size = RoadMap.RoadMapGVD(worldMap,unit)
         
     def get_road(self, v1, v2):
         (x1,y1) = v1
@@ -223,7 +315,7 @@ class RoadMap:
         
         col1 = set(self.color[x1,y1]) 
         col2 = set(self.color[x2,y2])
-        
+         
         intercept = list(col1.intersection(col2))
         
         if len(intercept) == 2:
@@ -266,6 +358,7 @@ class RoadMap:
         vertex = {}
         adj = {}
         vertex_area = {}
+        size = {}
         
         #?######################## Inner Methods ###########################
         
@@ -281,6 +374,18 @@ class RoadMap:
                         distance[i, j] = inf
 
             return distance, queue
+
+        def init_size(colors):
+            for i in range(-3, colors + 1):
+                num = i if i > 0 else i - 1
+                size[num] = ((-inf, inf), (-inf, inf))
+        
+        def update_size(currentcolor, dx, dy):
+            for num_color in currentcolor:
+                newsize = size[num_color]
+                item1 = max(newsize[0][0], dx), min(newsize[0][1], dx)
+                item2 = max(newsize[1][0], dy), min(newsize[1][1], dy)
+                size[num_color] = (item1, item2)
 
         def add_border(shape):
             border = [(-1, i, 0) for i in range(-1, shape[1])]
@@ -349,9 +454,9 @@ class RoadMap:
         #?##############################################################################             
 
         distance, queue = initialize()
-        color = DFS(queue, distance)
+        color, num_colors = DFS(queue, distance)
         queue = add_border(worldMap.shape) + queue
-
+        init_size(num_colors)
 
         while(len(queue) > 0):
 
@@ -377,6 +482,8 @@ class RoadMap:
                         # is_border = False
                     # Si la casilla aun no pertenece a ningun plano se marca como perteneciente al mismo plano que su adyacente
                     
+                    update_size(currentcolor, dx, dy)
+
                     if distance[dx, dy] == inf:
                         distance[dx, dy] = d + 1
                         color[dx, dy] = currentcolor.copy()
@@ -401,7 +508,7 @@ class RoadMap:
 
                     queue.append((dx, dy, d + 1))           
                     edges.add((dx, dy))
-        return vertex, distance, color, roads, vertex_area, adj
+        return vertex, distance, color, roads, vertex_area, adj, size
 
 
 def DFS(obstacles, distance):
@@ -427,5 +534,5 @@ def DFS(obstacles, distance):
             color += 1
             internalDFS((i, j, _), visited, [color])
 
-    return visited
+    return visited, color
 

@@ -25,8 +25,7 @@ class Problem(object):
         return '{}({!r}, {!r})'.format(
             type(self).__name__, self.goals)
 
-
-class FindVertex(Problem):
+class ViewProblem(Problem):
     def __init__(self, roadmap, *args, **kwargs):
         self.roadmap = roadmap
         self.dim_x, self.dim_y = roadmap.distance.shape
@@ -37,7 +36,7 @@ class FindVertex(Problem):
         x, y = state
         dirs = [(dirvar.name, (I_DIR[dirvar.value - 1], J_DIR[dirvar.value - 1])) for dirvar in DIRECTIONS]
         return [(name, move) for name, move in dirs 
-                                    if validMove(x + move[0], y + move[1], self.dim_x, self.dim_y) and self.roadmap.distance[x + move[0], y + move[1]] != 0]
+                                    if validMove(x + move[0], y + move[1], self.dim_x, self.dim_y)]
 
     def result(self, state, action):
         """The state that results from executing this action in this state."""
@@ -47,8 +46,15 @@ class FindVertex(Problem):
 
     def is_goal(self, state):
         """True if the goal level is in any one of the jugs."""
-        return state in self.goals
+        return state in self.goals    
 
+class FindVertex(ViewProblem):
+    def actions(self, state):
+        """The actions executable in this state."""
+        x, y = state
+        dirs = [(dirvar.name, (I_DIR[dirvar.value - 1], J_DIR[dirvar.value - 1])) for dirvar in DIRECTIONS]
+        return [(name, move) for name, move in dirs 
+                                    if validMove(x + move[0], y + move[1], self.dim_x, self.dim_y) and self.roadmap.distance[x + move[0], y + move[1]] != 0]
 
 class FindWithAgent(FindVertex):
     def __init__(self, reservation_table: dict, *args, **kwargs):
@@ -84,6 +90,10 @@ class FindWithAgent(FindVertex):
     
 
 class FindVoronoiVertex(FindVertex):
+    def __init__(self, roadmap, *args, **kwargs):
+        self.roadmap = roadmap
+        Problem.__init__(self, *args, **kwargs)
+
     def actions(self, state):
         """The actions executable in this state."""
         x, y = state
