@@ -3,7 +3,7 @@ from entities.agent import *
 
 class BasicAgent:
     
-    def __init__(self, connector, action_list, events, rithm =None):
+    def __init__(self, connector, action_list = None, events = None, rithm =None):
         self.connector = connector
         self.action_list = action_list
         self.rithm = rithm
@@ -24,7 +24,9 @@ class BasicAgent:
         self.is_invalid = True
         self.events._is_invalid(self,move)
     
-         
+    def get_vision_radio(self):
+        return self.connector.unit.get_vision_radio 
+        
     def get_position(self):
         return self.connector.get_position()
     

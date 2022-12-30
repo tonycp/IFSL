@@ -106,11 +106,11 @@ class MediumAgentMove:
         self.agents.remove(agent)
 
 class MediumAgentFigth:
-    def __init__(self, agents, oponents):
+    def __init__(self, agents, oponents, map):
         self.agents = agents
         self.oponents = oponents
         self.stategie = FigthGame()
-        self.availables = agents
+        self.available = agents
         self.my_events = { 'is_invalid': self._is_invalid, 'end_task': self._end_task, 'is_dead': self._is_dead}
         
     def asign_figters(self, available_agents, oponents):
@@ -145,7 +145,7 @@ class MediumAgentFigth:
         attacks = []
         while recalc:
             x,y = recalc.pop(0)
-            state = State(map, x.connector,y, bussy[x.__id] or [])
+            state = State(self.map, x.connector,y, bussy[x.__id] or [])
             value ,action = h_alphabeta_search_solution(self.strategie,state, 3, self.strategie.heuristic)
             if action[0] == "move":
                 bus =  bussy.get(x.connector.__id) or []
