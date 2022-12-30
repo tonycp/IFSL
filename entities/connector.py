@@ -86,7 +86,7 @@ class StateMannager:
             for state in [self.map[x.get_position()] for x in agent.connectors]:
                 breadth_first_search(Node(state), filter, reached, adj, state.get_unit.get_vision_radio)
             agent.decide(reached)
-
+            
         # Ejecutar las acciones
         log = self.__exec_actions()
         return log
