@@ -3,18 +3,19 @@ from entities.agent import *
 
 class BasicAgent:
     
-    def __init__(self, connector, action_list = None, events = None, rithm =None):
+    def __init__(self, connector, action_list=None, events=None, rithm =None):
         self.connector = connector
         self.action_list = action_list
         self.rithm = rithm
         if rithm is None: 
-            self.rithm = connector.unit.move_cost
-        self.current_time = rithm
+            self.rithm = connector.unit.get_move_cost
+        self.current_time = self.rithm
         self.events = events
         self.prev = None
         self.is_invalid =False
         
     def set_action_list(self,action_list = None, rithm = None, events = None):
+        self.prev = None
         self.is_invalid =False
         self.action_list = action_list or self.action_list
         self.rithm = rithm or self.rithm
@@ -22,16 +23,14 @@ class BasicAgent:
         
     def invalid_move(self, move):
         self.is_invalid = True
-        self.events._is_invalid(self,move)
-    
-    def get_vision_radio(self):
-        return self.connector.unit.get_vision_radio 
-        
+        self.events['is_invalid'](self)
+
+
     def get_position(self):
         return self.connector.get_position()
     
     def get_move_cost(self):
-        return self.connector.unit.move_cost       
+        return self.connector.unit.get_move_cost 
           
     def eject_action(self):
         """ejecutar una accion por el conector"""
@@ -41,12 +40,14 @@ class BasicAgent:
             
         if self.is_invalid:
             self.is_invalid = False
-            self.connector.notify_move(self.connector, self.connector.prev_dir)
+            direction = dir_tuple[(self.prev[1][0] - self.connector.get_position()[0], self.prev[1][1] - self.connector.get_position()[1])]
+            self.connector.notify_move(self.connector, direction)
             self.current_time = 0
             return
         
-        if(self.prev[0]=="move" and self.conector.state != STATES.stend and  self.connector.timer > 0):
-            self.connector.notify_move(self.connector, self.connector.prev_dir)
+        if(self.prev is not None and self.prev[0]=="move" and self.connector.state != STATES.Stand and  self.connector.timer > 0):
+            direction = dir_tuple[(self.prev[1][0] - self.connector.get_position()[0], self.prev[1][1] - self.connector.get_position()[1])]
+            self.connector.notify_move(self.connector, direction)
         
         if self.current_time < self.rithm: 
             self.current_time+=1
@@ -62,10 +63,10 @@ class BasicAgent:
 
                 elif self.prev[0] == "move":
                     self.current_time = 0
-                    direction = dir_tuple[(self.prev[1][0] - self.connector.get_possition()[0], self.prev[1][1] - self.connector.get_possition()[1])]
-                    self.connector.notify_attack(self.connector, direction)
+                    direction = dir_tuple[(self.prev[1][0] - self.connector.get_position()[0], self.prev[1][1] - self.connector.get_position()[1])]
+                    self.connector.notify_move(self.connector, direction)
             else: 
-                self.events._end_task(self)
+                self.events['end_task'](self)
 
     def __hash__(self):
         return hash(self.connector)

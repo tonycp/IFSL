@@ -49,7 +49,7 @@ class Formation:
         
     def __init__(self, nodeN: int, edges:dict, relative_positions:dict, main:int = 0, main_position = None, direction = DIRECTIONS.N):
         self.nodes = []
-        self.main = main 
+        self.main = main
         self.N = nodeN
         self.dir = direction
         for n in range(0, nodeN):
@@ -57,6 +57,7 @@ class Formation:
         
         if main_position:
             self.set_in(*main_position)
+        self.poss = self.nodes[main].position
     
     def set_in(self, x,y):
         updates = []
