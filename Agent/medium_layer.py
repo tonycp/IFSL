@@ -146,21 +146,25 @@ class MediumAgentFigth:
         pass
     
     def figth_in_formation(self):
+        
+        #Se asignan las parejas de lucha segun distancia entre los enemigos y los conectores que estan sin hacer nada
         recalc = self.asign_figters(self.available, self.oponents)
-        bussy = {}
+        bussy = {} 
         best_move = {}
         attacks = []
-        while recalc:
+        while recalc: #mientras que haya parajas a las que recalcularle el minimax
             x, y = recalc.pop(0)
-            state = State(self.map, x.connector, self.map[y].unit, bussy.get(x.connector.id) or [])
+            state = State(self.map, x.connector, self.map[y].unit, bussy.get(x.connector.id) or []) #se crea un estado que contemple el estado actual de la pareja
+            #en combate, el mapa y las ubicaciones en las que ya no tiene sentido que se paren
+            
             value, action = h_alphabeta_search_solution(self.strategie, state, lambda x, y, z: z >= 3, self.strategie.heuristic)
-            if action[0] == "move":
+            if action[0] == "move": #si la accion es un move entonces hay que ver si no confluyen variosmove a una misma casilla
                 bus =  bussy.get(x.connector.id) or []
                 bus.append(action[1])
                 bussy[x.connector.id] = bus
 
                 move = best_move.get(action[1])
-                if move is not None:
+                if move is not None: #en caso que varios se muevan al mismo lugar se coge el de resultado mas prometedor
                     x0,y0,V = move
                     if V < value:
                         move = (x,y,value)
@@ -170,7 +174,7 @@ class MediumAgentFigth:
                 else: move = (x,y,value)
                 best_move[action[1]] = move
             elif action[0] == "attack":
-                attacks.append((x,action[1]))
+                attacks.append((x,action[1])) #si es un ataque siempre se puede ejecutar 
         self.set_actions(best_move, attacks)
         self.eject_actions()
 
