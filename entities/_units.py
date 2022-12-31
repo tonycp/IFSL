@@ -1,5 +1,5 @@
 from .utils import Singleton
-
+from math import inf
 class Unit:
     def __init__(self, attack_range, damage, vision_radio, health_points, move_cost) -> None:
         self.__attack_range = attack_range
@@ -70,3 +70,11 @@ class Explorer(Unit, metaclass=Singleton):
     @property
     def weakness(self, other):
         return True if other is Unit else False
+
+class Base(Unit, metaclass=Singleton):
+    def __init__(self):
+        Unit.__init__(self,15,100,25,10000, inf)
+        
+    @property
+    def weakness(self, other):
+        return False
