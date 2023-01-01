@@ -51,6 +51,7 @@ class StateMannager:
         
         def __hash__(self) -> int:
             return self.__id
+
         def __repr__(self) -> str:
             return str(self.__id)
     
@@ -173,6 +174,8 @@ class StateMannager:
         #Actualizando los timers
         for index in range(len(self.move_notifications)):
             connector, num_dir = self.move_notifications[index]
+            if(not connector.is_connected):
+                continue
             if(not connector.prev_dir or connector.prev_dir != num_dir or connector.state != STATES.Moving):
                 connector.timer = connector.unit.get_move_cost
                 connector.prev_dir = num_dir
