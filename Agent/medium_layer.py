@@ -53,50 +53,31 @@ class MediumAgentMove:
         if poss is not None and self.ia.goal != poss:
             self.ia.set_goal(self.formation.poss, poss, self.roadmap)
 
-        if self.time_waited > self.time_to_wait:
-            self.time_waited = 0 
-            self.path = self.ia.get_move_for(self.formation.poss, 2) # cambiar vision
-            if not self.path:
-                return
-            self._notify_formation_task()
+        if not len(self.invalidate) and self.subgoals:
+            path = self.ia.get_move_for(self.formation.poss, 2) # cambiar vision
+            if path:
+                self._notify_formation_task(path)
+            return
+        self._notify_move()
 
-        self.time_waited += 1
-        for _, value in self.units.items():
-            if(value.state != STATES.Stand and value.timer > 0):
-                value.notify_move(value, value.prev_dir)
-        if invalidated:
-            for conector, direct in invalidated:
-                conector.notify_move(conector, direct)
-                self.time_to_wait = max(self.time_to_wait, conector.unit.get_move_cost)
+    def explore_in_formation():
+        pass 
+     
+    def inform_move():
+        pass 
     
-    def _notify_formation_move(self, direction):
-        self.formation.move(*direction)
-        for unit in self.units.values():
-            dir_tuple[direction]
-            if(unit.state == STATES.Stand):
-                unit.notify_move(unit, )
-            elif(unit.timer > 0):
-                unit.notify_move(unit, unit.prev_dir)
-    
-    def _is_invalid(self, id):
-        self.invalidate.add(id)
+    def inform_view():
+        pass
 
-    def _solve_invalid(self, id):
-        self.invalidate.remove(id)
-
-    def _end_task(self):
-        self.subgoals += 1
-
-    def _notify_formation_task(self):
-        next_x, next_y = self.path.pop(0)
+    def _notify_formation_task(self, path: list[tuple]):
         x, y = self.formation.poss
-        self.dirt = (next_x - x, next_y - y)
+        dirts = [(next_x - x, next_y - y) for next_x, next_y in path]
         for unit in self.units.values():
             x, y = unit.get_position()
-            actions = [("move", (x + self.dirt[0], y + self.dirt[1]))]
+            actions = [("move", (x + dx, y + dy)) for dx, dy in dirts]
             unit.set_action_list(actions, self.rithm, self.events)
 
-    def _notify_task(self, paths):
+    def _notify_task(self, paths: list[tuple[BasicAgent, tuple]]):
         for unit, path in paths:
             actions = [("move", move) for move in path]
             unit.set_action_list(actions, self.rithm, self.events)
@@ -107,14 +88,14 @@ class MediumAgentMove:
                 continue
             unit.eject_action()
 
-    def explore_in_formation():
-        pass 
-     
-    def inform_move():
-        pass 
-    
-    def inform_view():
-        pass
+    def _is_invalid(self, id):
+        self.invalidate.add(id)
+
+    def _solve_invalid(self, id):
+        self.invalidate.remove(id)
+
+    def _end_task(self):
+        self.subgoals += 1
 
 class MediumAgentFigth:
     def __init__(self, connectors, oponents):
