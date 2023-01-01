@@ -85,28 +85,39 @@ class MediumAgentMove:
         pass
 
 class MediumAgentFigth:
-    def __init__(self, connectors, oponents):
-        self.connectors = connectors
+    def __init__(self, agents, oponents):
+        self.agents = agents
         self.oponents = oponents
         self.stategie = FigthGame()
         self.current_actions = []
+        self.availables = agents
         
-    def asign_figters(self):
+    def asign_figters(self, available_agents, oponents):
         pass 
     
+    def _end_task(self, agent):
+        self.available.append(agent)
+        
+        
+    def _is_invalid(self, agent):
+        pass
+
+    def _solve_invalid():
+        pass
+    
     def figth_in_formation(self):
-        recalc = self.asign_figters()
+        recalc = self.asign_figters(self.available, self.oponents)
         bussy = {}
         best_move = {}
         attacks = []
         while recalc:
             x,y = recalc.pop(0)
-            state = State(map, x,y, bussy[x.__id] or [])
+            state = State(map, x.connector,y, bussy[x.__id] or [])
             value ,action = h_alphabeta_search_solution(self.strategie,state, 3, self.strategie.heuristic)
             if action[0] == "move":
-                bus =  bussy.get(x.__id) or []
+                bus =  bussy.get(x.connector.__id) or []
                 bus.append(action[1])
-                bussy[x.__id] = bus 
+                bussy[x.connector.__id] = bus 
                 
                 move = best_move.get(action[1]) or (x,y,value)
                 x0,y0,V = move
@@ -117,14 +128,22 @@ class MediumAgentFigth:
             elif action[0] == "attack":
                 attacks.append((x,action[1]))
         self.set_actions(best_move, attacks)
+        self.eject_actions()
+    
                 
                 
     def set_actions(self, moves, attacks):
-        pass   
-        
+        for x , pos in attacks:
+            x.set_action_list([("attack", pos)])
+        for pos, (x,_,_) in moves.items():
+            x.set_action_list([("move", pos)])
+              
+    def eject_actions(self):
+        for agent in self.agents:
+            agent.eject_action()   
     
     def inform_figth():
-        pass 
+        pass  
     
     def inform_view():
         pass
