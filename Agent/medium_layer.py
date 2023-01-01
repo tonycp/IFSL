@@ -1,5 +1,6 @@
 from IA._definitions import *
 from IA.basicAlgorithms import RRAstar, RoadMap, whcastar_search
+from entities.agent import RoadMapMove_IA
 from IA.formations import Formation
 from entities.utils import DIRECTIONS, STATES, dir_tuple
 from low_layer import BasicAgent
@@ -7,20 +8,20 @@ import numpy as np
 
 
 class MediumAgentMove:
-    def __init__(self) -> None:
-        self.formation: Formation
-        self.units: dict[int, BasicAgent]
-        self.from_to: list[tuple[int, int]]
-        self.rrastar_list: list[RRAstar]
-        self.all_goals: list[bool]
-        self.positioned: bool
-        self.dirt: DIRECTIONS
-        self.roadmap: RoadMap
-        self.path: dict[BasicAgent, list[tuple[int, int]]]
-        self.rithm: int
-        self.ia: Move_IA
-        self.invalidate: set
+    def __init__(self, agents: set[BasicAgent], formation: Formation, roadmap: RoadMap) -> None:
+        self.dirt: DIRECTIONS = formation.dir
+        self.ia = RoadMapMove_IA() # Move_IA
+        self.formation = formation
+        self.invalidate = set()
+        self.roadmap = roadmap
+        self.agents = agents
         self.subgoals = 0
+        self.positioned: bool = None
+        self.all_goals: list[bool] = None
+        self.rrastar_list: list[RRAstar] = None
+        self.from_to: list[tuple[int, int]] = None
+        self.path: dict[BasicAgent, list[tuple[int, int]]] = None
+        self.max_cost: int = max(agents, key=lambda x: x.get_move_cost())
         self.events: dict = { 'is_invalid': self._is_invalid, 'end_task': self._end_task, 'solve_invalid': self._solve_invalid }
 
     def go_to_formation(self, poss = None, dirt = None):
@@ -30,7 +31,7 @@ class MediumAgentMove:
         if poss is not None and self.formation.piss != poss:
             self.formation.set_in(*poss)
 
-        start_poss = [u.get_position() for _, u in self.units.items()]
+        start_poss = [u.get_position() for u in self.agents]
         new_from_to = self.formation.asign_formation(start_poss)
         self.go_to_positions(new_from_to)
 
@@ -38,13 +39,12 @@ class MediumAgentMove:
     def go_to_positions(self, from_to):
         new_goal = False
         if self.from_to != from_to:
-            self.rrastar_list = np.ndarray(shape=(len(self.units)), dtype=RRAstar)
+            self.rrastar_list = np.ndarray(shape=(len(self.agents)), dtype=RRAstar)
             new_goal = True
         self.from_to = from_to
         self.all_goals = list(map(lambda x: x[0].get_position() != x[1], self.from_to))
         self.positioned = not any(self.all_goals)
         if self.positioned:
-            [self.formation.dir]
             return
 
         if not len(self.invalidate) and (new_goal or self.subgoals):
@@ -76,7 +76,7 @@ class MediumAgentMove:
     def _notify_formation_task(self, path: list[tuple]):
         x, y = self.formation.poss
         dirts = [(next_x - x, next_y - y) for next_x, next_y in path]
-        for unit in self.units.values():
+        for unit in self.agents.values():
             x, y = unit.get_position()
             actions = [("move", (x + dx, y + dy)) for dx, dy in dirts]
             unit.set_action_list(actions, self.rithm, self.events)
@@ -87,19 +87,23 @@ class MediumAgentMove:
             unit.set_action_list(actions, self.rithm, self.events)
 
     def _notify_move(self):
-        for unit in self.units.values():
-            if unit not in self.invalidate: 
-                continue
+        agents = self.agents
+        if len(self.invalidate):
+            agents = self.invalidate
+        for unit in agents:
             unit.eject_action()
 
-    def _is_invalid(self, id):
-        self.invalidate.add(id)
+    def _is_invalid(self, agent):
+        self.invalidate.add(agent)
 
-    def _solve_invalid(self, id):
-        self.invalidate.remove(id)
+    def _solve_invalid(self, agent):
+        self.invalidate.remove(agent)
 
     def _end_task(self):
         self.subgoals += 1
+    
+    def _is_dead(self, agent):
+        self.agents.remove(agent)
 
 class MediumAgentFigth:
     def __init__(self, agents, oponents):
