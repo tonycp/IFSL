@@ -27,9 +27,16 @@ class BasicAgent:
          
     def get_position(self):
         return self.connector.get_position()
-           
+    
+    def get_move_cost(self):
+        return self.connector.unit.move_cost       
+          
     def eject_action(self):
         """ejecutar una accion por el conector"""
+        if not self.connector.is_connected():
+            self.events["id_dead"](self)
+            return
+            
         if self.is_invalid:
             self.is_invalid = False
             self.connector.notify_move(self.connector, self.connector.prev_dir)
@@ -57,4 +64,10 @@ class BasicAgent:
                     self.connector.notify_attack(self.connector, direction)
             else: 
                 self.events._end_task(self)
+
+    def __hash__(self):
+        return hash(self.connector)
+    
+    def __eq__(self, __o: object):
+        return __o is not None and self.connector.__id == __o.connector.__id
                 

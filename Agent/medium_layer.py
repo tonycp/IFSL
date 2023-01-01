@@ -110,9 +110,8 @@ class MediumAgentFigth:
         self.agents = agents
         self.oponents = oponents
         self.stategie = FigthGame()
-        self.current_actions = []
         self.availables = agents
-        self.events = { 'is_invalid': self._is_invalid, 'end_task': self._end_task}
+        self.my_events = { 'is_invalid': self._is_invalid, 'end_task': self._end_task, 'is_dead': self._is_dead}
         
     def asign_figters(self, available_agents, oponents):
         result = []
@@ -135,6 +134,9 @@ class MediumAgentFigth:
     def _is_invalid(self, agent):
         self.available.append(agent)
 
+    def _is_dead(self, agent):
+        self.agents = self.agents.intersection(agent)
+        pass
     
     def figth_in_formation(self):
         recalc = self.asign_figters(self.available, self.oponents)
@@ -165,9 +167,9 @@ class MediumAgentFigth:
                 
     def set_actions(self, moves, attacks):
         for x , pos in attacks:
-            x.set_action_list([("attack", pos)], events = { 'is_invalid': self._is_invalid, 'end_task': self._end_task, 'solve_invalid': self._solve_invalid })
+            x.set_action_list([("attack", pos)], events = self.my_events)
         for pos, (x,_,_) in moves.items():
-            x.set_action_list([("move", pos)], events = { 'is_invalid': self._is_invalid, 'end_task': self._end_task, 'solve_invalid': self._solve_invalid })
+            x.set_action_list([("move", pos)], events = self.my_events)
               
     def eject_actions(self):
         for agent in self.agents:
