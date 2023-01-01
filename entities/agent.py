@@ -88,13 +88,13 @@ class RoadMapMove_IA(object):
     def __init__(self) -> None:
         self.goal = None
 
-    def set_goal(self, connector: S.Connector, goal=None, roadmap= None):
+    def set_goal(self, start, goal=None, roadmap= None):
         self.roadmap = roadmap
         self.goal = goal
         self.path = []
         if goal is not None:
             self.start = True
-            position_start = connector.get_position()
+            position_start = start
             vertexs_state_start = self.roadmap.get_vertex_area(*position_start)
             findproblem_start = FindVoronoiVertex(self.roadmap, vertexs_state_start)
 
@@ -116,7 +116,7 @@ class RoadMapMove_IA(object):
                 astar_search_problem(start, vertexproblem,
                                      lambda n: norma2(n.state, end.state)))[1:]
 
-    def get_move_for(self, connector: S.Connector):
+    def get_move_for(self, poss, view_range):
         # if self.viewrange(self.goal, connector.get_position(), connector.unit.get_vision_radio):              # stay near goal
         #     self.steer_toward(connector)
         # elif self.viewrange(self.goalpath[0], connector.get_position(), connector.unit.get_vision_radio):    # set next subgoal as the target
@@ -126,14 +126,14 @@ class RoadMapMove_IA(object):
         if (len(self.goalpath) == 0 and len(self.path) == 0):
             self.goal = None
         if self.goal is None: return
-        elif len(self.path) == 0 and self.viewrange(self.goalpath[0], connector.get_position(), connector.unit.get_vision_radio):    # set next subgoal as the target
+        elif len(self.path) == 0 and self.viewrange(self.goalpath[0], poss, view_range):    # set next subgoal as the target
             self.subgoal = self.goalpath.pop(0)
-        self.steer_toward(connector)
+        self.steer_toward(poss, view_range)
         return self.path
 
-    def steer_toward(self, connector: S.Connector):
-        if len(self.roadmap.color[connector.get_position()]) >= 3:
-            self.path = self.next_roadmap_path(connector.get_position())
+    def steer_toward(self, poss, view_range):
+        if len(self.roadmap.color[poss]) >= 3:
+            self.path = self.next_roadmap_path(poss)
         elif self.start:
             self.path = self.start_costs[self.subgoal]
             self.start = False
@@ -260,4 +260,4 @@ class ForamtionMoveControl_IA(object):
             if(key.state == STATES.Stand):
                 key.notify_move(key, dir_tuple[direction])
             elif(key.timer > 0):
-                key.notify_move(key, key.prev_dir) 
+                key.notify_move(key, key.prev_dir)
