@@ -78,14 +78,14 @@ class StateMannager:
         # Pedir acciones a cada una de las IAs
         
         for agent in self.agents:
-            reached = []
             problem = ViewProblem(self.roadmap)
-            filter = lambda x: x.state.get_unit.agent.id != agent.id
+            filter = lambda x: not self.map[x.state].is_empty and self.map[x.state].unit.agent.id != agent.id
             adj = lambda x: expand(problem, x)
 
-            for state in [self.map[x.get_position()] for x in agent.connectors]:
-                breadth_first_search(Node(state), filter, reached, adj, state.get_unit.get_vision_radio)
-            agent.decide(reached)
+            view = set()
+            for state in [x.get_position() for x in agent.connectors.values()]:
+                view = view.union([self.map[node.state].unit for node in breadth_first_search(NodeTree(state=state), filter, adj, None, self.map[state].unit.unit.get_vision_radio)])
+            agent.decide(view)
             
         # Ejecutar las acciones
         log = self.__exec_actions()

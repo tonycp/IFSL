@@ -1,27 +1,32 @@
 from itertools import chain
 from queue import PriorityQueue
+import random
 from ._definitions import *
 import entities.utils as util
 import numpy as np
 from math import inf
 
 def hill_climbing(goals: list[tuple], cost, iter_count = 30):
-    best_sol = np.array(range(len(goals)))[np.random.choice(list(range(len(goals))), len(goals), replace = False)]
+    best_sol = goals.copy()
+    random.shuffle(best_sol)
     cost_sol = cost(best_sol)
     change = True
     count = 0
 
-    while(count < iter_count and change):
+    while(count < iter_count or change):
         change = False
         for i in range(len(best_sol)):
             for j in range(1, len(best_sol)):
                 new_sol = best_sol.copy()
                 new_sol[i], new_sol[j] = best_sol[j], best_sol[i]
                 new_cost = cost(new_sol)
-                if cost_sol < new_cost:
+                if cost_sol > new_cost:
                     best_sol = new_sol
                     cost_sol = new_cost
                     change = True
+        count += 1
+    
+    return best_sol
 
 def breadth_first_search_problem(node: NodeTree, problem: Problem):
     filter = lambda n: problem.is_goal(n.state)

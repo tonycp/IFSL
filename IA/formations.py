@@ -88,3 +88,9 @@ class TwoRowsFormation(Formation):
         Formation.__init__(self,nodeN, edges, relative_positions, main_position=start)        
         
         
+class OneFormation(Formation):
+   def __init__(self, start):
+        edges =  {0: [1]}
+        relative_positions = { 0: {1: (0,0)}}
+        Formation.__init__(self,2, edges, relative_positions, main_position=start)        
+ 

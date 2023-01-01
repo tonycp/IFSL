@@ -3,8 +3,8 @@ from .connector import StateMannager as S
 from ._units import Knight
 from random import randint
 from .utils import int_to_direction, DIRECTIONS, STATES, I_DIR, J_DIR, norma2
-from IA.basicAlgorithms import RRAstar, astar_search_problem, RoadMap, breadth_first_search_problem, best_first_search, whcastar_search
-from IA._definitions import NodeTree, MoveVoronoiProblem, FindVoronoiVertex, path_states, expand, CSP_UncrossedAsignmentTime
+from IA.basicAlgorithms import RRAstar, astar_search_problem, RoadMap, breadth_first_search_problem, best_first_search, whcastar_search, hill_climbing
+from IA._definitions import NodeTree, MoveVoronoiProblem, FindVoronoiVertex, path_states, expand, CSP_UncrossedAsignmentTime, evaluate_HillClimbingAsignment
 from IA.formations import *
 import numpy
 
@@ -47,21 +47,30 @@ class Agent(object):
     def invalidations(self, invalidated_conectors):
         self.invalidated = invalidated_conectors  
     
-    
-    def move_connectors(self):
+    def mov_formations(self):
         for form in self.formations:
             form.get_move(self.invalidated)
-            
-        # for id, c in self.connectors.items():
-        #     if not c.is_connected():
-        #         self.connectors.__delitem__(id)
-        #     else:
-        #         if self.ia.goal is None and self.goal is not None:
-        #             self.ia.set_goal(c, self.goal, self.roadmap)
-        #         self.ia.get_move_for(c)
+    
+    def move_connectors(self):
+        
+        for id, c in self.connectors.items():
+            if not c.is_connected():
+                self.connectors.__delitem__(id)
+            else:
+                if self.ia.goal is None and self.goal is not None:
+                    self.ia.set_goal(c, self.goal, self.roadmap)
+                self.ia.get_move_for(c)
+
+    def explore(self):
+       for form in self.formations:
+            if form is OneFormation:
+                form.get_move(self.invalidated) 
 
     def decide(self, view):
-        self.move_connectors()
+        self.mov_formations()
+        # if len(view) > 0:
+        # else: 
+        #     self.explore()
 
 class RandomMove_IA(object):
     def __init__(self, map) -> None:
@@ -162,17 +171,11 @@ class ForamtionMoveControl_IA(object):
         self.goal = goal
         self.positioned = False
         self.result = None
-        # index = 0
         self.rrastar_list = numpy.ndarray(shape=(len(conectors)), dtype=RRAstar)
            
         if main_position and formation_shape.nodes[formation_shape.main].position is None:
             formation_shape.set_in(*main_position)
-        # for i in conectors.values():
-        #     if index == formation_shape.main: 
-        #         index+=1
-        #     self.asignment[i] = index
-        #     index+=1 
-    
+
     def get_move(self, invalidated):
         if self.positioned:
             self.move_in_formation(invalidated)
@@ -181,12 +184,17 @@ class ForamtionMoveControl_IA(object):
             self.go_to_formation()
 
     def asign_formation(self):
-        csp = CSP_UncrossedAsignmentTime([c for _,c in self.conectors.items()], [pos.position for pos in self.formation_shape.nodes if pos.state != self.formation_shape.main])
-        csp.back_track_solving()
-        if csp.asignment: 
-            from_to = [(y,x) for x,y in csp.asignment.items()]     
-        else:
-            from_to = [(c, self.formation_shape.nodes[id].position) for id ,c in self.conectors.items()]
+        start = [c for _,c in self.conectors.items()]
+        goal = [pos.position for pos in self.formation_shape.nodes if pos.state != self.formation_shape.main]
+        csp = CSP_UncrossedAsignmentTime(start, goal)
+        # csp.back_track_solving()
+        # if csp.asignment: 
+
+        #     from_to = [(y,x) for x,y in csp.asignment.items()]     
+        # else:
+        cost = lambda x: evaluate_HillClimbingAsignment(csp, start, x, alpha= 10)
+        best = hill_climbing(goal, cost, 100)
+        from_to = list(zip(start, best))
         return from_to
 
     def move_in_formation(self, invalidated):
@@ -198,7 +206,7 @@ class ForamtionMoveControl_IA(object):
             self.result = self.ia.get_move_for(self.fake_main)
             if not self.result:
                 if self.result == None:
-                    self.rotate_formation(4)
+                    self.rotate_formation(3)
                 return
             next_x, next_y = self.result.pop(0)
             x, y = self.formation_shape.nodes[self.formation_shape.main].position
