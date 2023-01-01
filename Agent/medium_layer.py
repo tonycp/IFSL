@@ -31,12 +31,15 @@ class MediumAgentMove:
 
         start_poss = [u.get_position() for _, u in self.units.items()]
         new_from_to = self.formation.asign_formation(start_poss)
+        self.go_to_positions(new_from_to)
+
+
+    def go_to_positions(self, from_to):
         new_goal = False
-        if self.from_to != new_from_to:
+        if self.from_to != from_to:
             self.rrastar_list = np.ndarray(shape=(len(self.units)), dtype=RRAstar)
             new_goal = True
-        self.from_to = new_from_to
-        
+        self.from_to = from_to
         self.all_goals = list(map(lambda x: x[0].get_position() != x[1], self.from_to))
         self.positioned = not any(self.all_goals)
         if self.positioned:
@@ -44,11 +47,11 @@ class MediumAgentMove:
             return
 
         if not len(self.invalidate) and (new_goal or self.subgoals):
-            self.path = whcastar_search(goals=self.from_to, roadmap=self.roadmap, rrastar_list=self.rrastar_list, w=8)
+            self.path = whcastar_search(goals = self.from_to, roadmap=self.roadmap, rrastar_list=self.rrastar_list, w=8)
             self._notify_task(self.path.items())
         self._notify_move()
 
-    
+
     def move_in_formation(self, poss = None):
         if poss is not None and self.ia.goal != poss:
             self.ia.set_goal(self.formation.poss, poss, self.roadmap)
