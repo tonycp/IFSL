@@ -488,14 +488,25 @@ class FigthGame(Game):
         if player == player2["id"]:
             player1, player2 = player2,player1
         
-        h = player1["hp"][-1]/ player2["hp"][-1] 
+        #bonificar la reduccion de vida del oponente
+        h = player2["hp"][0] - player2["hp"][-1]
+        
+        #penalizar valor si pierdes al oponente de vista
         if norma2(player1["pos"][-1], player2["pos"][-1]) > player1["view"]:
+            h -= 10
+         
+        #penalizar si se va de tu rango de ataque   
+        if norma2(player1["pos"][-1], player2["pos"][-1]) > player1["attack"]:
             h -= 5
+        
+        #bonificar si tienes al oponente dentro de tu rango de ataque pero el no te puede atacar a ti
         if player1["attack"] >= norma2(player1["pos"][-1], player2["pos"][-1]) >= player2["attack"]:
-            h+=10
-        if norma2(player1["pos"][-1], player2["pos"][-1]) >= player2["attack"]:
-            h+=5
-        h -= norma2(player1["pos"][-1], player2["pos"][-1])
+            h += 10
+        
+        #bonificar si el oponente esta en tu rango de ataque
+        if norma2(player1["pos"][-1], player2["pos"][-1]) <= player1["attack"]:
+            h += 5
+
         return h
          
     def undo(self, action, state):
