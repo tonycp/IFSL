@@ -43,6 +43,18 @@ def direction_to_tuple(direction):
         return (0,-1)
     elif direction == DIRECTIONS.NW:
         return (-1,-1)
+
+dir_tuple = {
+    (-1, 0): DIRECTIONS.N,
+    (-1, 1): DIRECTIONS.NE,
+    (0, 1): DIRECTIONS.E,
+    (1, 1): DIRECTIONS.SE,
+    (1, 0): DIRECTIONS.S,
+    (1, -1): DIRECTIONS.SW,
+    (0, -1): DIRECTIONS.W,
+    (-1, -1): DIRECTIONS.NW
+}
+
 class Singleton(type):
     """
     clase usada para que todas las intancias hagan referencia al mismo objeto

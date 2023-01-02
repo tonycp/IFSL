@@ -407,7 +407,7 @@ def evaluate_HillClimbingAsignment(csp, connectors, goals, alpha = 1):
 
     
 #!###############################################################################################
-#!                                    ExpectedMiniMax                                           #
+#!                                            MiniMax                                           #
 #!###############################################################################################  
 
 infinity = math.inf
@@ -430,11 +430,9 @@ class Game:
         """Return the value of this final state to player."""
         raise NotImplementedError
     
-    def undo(self,state, action):raise NotImplementedError
+    def undo(self, state, action):raise NotImplementedError
         
 class FigthGame(Game):
-    def __init__(self, map_copy, player1, player2):
-        self.initial = State(map_copy, player1,player2)
     
     def actions(self, state):
         player = state.to_move
@@ -448,11 +446,11 @@ class FigthGame(Game):
         for z in range(0,len(I_DIR)):
             i = I_DIR[z]
             j = J_DIR[z]
-            if(validMove(x+i,y+j,map.shape[0], map.shape[1]) and (map[x+i,y+j].is_empty or player1["pos"][0] == (x+i,y+j))):
-                    actions.append(("move_to",x+i,(y+j)))
+            if((x + i, y + j) not in state.bussy and validMove(x + i, y + j, state.map.shape[0], state.map.shape[1]) and (state.map[x + i, y + j].is_empty or player1["pos"][0] == (x + i, y + j))):
+                    actions.append(("move", (x + i, y + j)))
         x2,y2 = player2["pos"][-1]
         if norma2((x,y),(x2,y2)) < player1["attack"]:
-            actions.append(("attack", (x2,y2)))
+            actions.append(("attack", (x2, y2)))
         return actions
     
     def result(self, state, move):
@@ -460,17 +458,17 @@ class FigthGame(Game):
         player1 = state.p1
         player2 = state.p2
         if player == player2["id"]:
-            player1, player2 = player2,player1
+            player1, player2 = player2, player1
         
         action, direction = move 
-        if action == "move_to":
+        if action == "move":
             player1["pos"].append(direction)
         elif action == "attack":
             times = 0
-            for i in range(0,200):
-                if randint(1,state.player1.move_cost + state.player2.move_cost) <= state.player2.move_cost:
+            for _ in range(0,200):
+                if randint(1, player1["move"] + player2["move"]) <= player2["move"]:
                     times+=1
-            player2["hp"].append(player2["hp"][-1] - state.player1.damage * times/200)
+            player2["hp"].append(player2["hp"][-1] - player1["dmg"] * times/200)
         state.to_move = player2["id"]
         return state
             
@@ -484,56 +482,71 @@ class FigthGame(Game):
             return 1000
         return 0
     
-    def heuristic(state, player):
+    def heuristic(self, state, player):
         player1 = state.p1
         player2 = state.p2
         if player == player2["id"]:
             player1, player2 = player2,player1
         
-        h = player1["hp"][-1]/ player2["hp"][-1] 
+        #bonificar la reduccion de vida del oponente
+        h = player2["hp"][0] - player2["hp"][-1]
+        
+        #penalizar valor si pierdes al oponente de vista
         if norma2(player1["pos"][-1], player2["pos"][-1]) > player1["view"]:
+            h -= 10
+         
+        #penalizar si se va de tu rango de ataque   
+        if norma2(player1["pos"][-1], player2["pos"][-1]) > player1["attack"]:
             h -= 5
+        
+        #bonificar si tienes al oponente dentro de tu rango de ataque pero el no te puede atacar a ti
         if player1["attack"] >= norma2(player1["pos"][-1], player2["pos"][-1]) >= player2["attack"]:
-            h+=10
+            h += 10
+        
+        #bonificar si el oponente esta en tu rango de ataque
+        if norma2(player1["pos"][-1], player2["pos"][-1]) <= player1["attack"]:
+            h += 5
+
         return h
          
-    def undo(self, state, action):
+    def undo(self, action, state):
         player = state.to_move
         player1 = state.p1
         player2 = state.p2
         if player == player1["id"]:
-            player1, player2 = player2,player1
-        name,_ = action
+            player1, player2 = player2, player1
+        name, _ = action
         if  name == "attack":
             player2["hp"].pop()
         elif name == "move":
             player1["pos"].pop()
-        state.to_move == player1["id"]
+        state.to_move = player1["id"]
               
                       
 class State(defaultdict):
     
-    def __init__(self, map, connector1, connector2, **kwds):
+    def __init__(self, map, connector1, connector2, bussy =None, **kwds):
         self.p1 ={} 
-        self.p1["id"] = connector1.__id
+        self.p1["id"] = connector1.id
         self.p1["attack"] = connector1.unit.get_attack_range
         self.p1["hp"] = [connector1.get_health_points()]
-        self.p1["view"] =connector1.unit.get_vision_radio
+        self.p1["view"] = connector1.unit.get_vision_radio
         self.p1["dmg"] = connector1.unit.get_damage
-        self.p1["move"] = connector1.unit.get_move_cost 
+        self.p1["move"] = min(100, connector1.unit.get_move_cost)
         self.p1["pos"] = [connector1.get_position()] 
         
         
         self.p2 ={} 
-        self.p2["id"] = connector2.__id
+        self.p2["id"] = connector2.id
         self.p2["attack"] = connector2.unit.get_attack_range
         self.p2["hp"] = [connector2.get_health_points()]
-        self.p2["view"] =connector2.unit.get_vision_radio
+        self.p2["view"] = connector2.unit.get_vision_radio
         self.p2["dmg"] = connector2.unit.get_damage
-        self.p2["move"] = connector2.unit.get_move_cost 
+        self.p2["move"] = min(100 ,connector2.unit.get_move_cost)
         self.p2["pos"] = [connector2.get_position()] 
         
-        self.to_move = connector1.__id
+        self.to_move = connector1.id
+        self.bussy =bussy
         self.map = map
             
     
@@ -548,7 +561,7 @@ def h_alphabeta_search_solution(game, state, cutoff, h):
         v, move = -infinity, None
         for a in game.actions(state):
             v2, _ = min_value(game.result(state, a), alpha, beta, depth+1)
-            game.undo()
+            game.undo(a,state)
             if v2 > v:
                 v, move = v2, a
                 alpha = max(alpha, v)
@@ -564,7 +577,7 @@ def h_alphabeta_search_solution(game, state, cutoff, h):
         v, move = +infinity, None
         for a in game.actions(state):
             v2, _ = max_value(game.result(state, a), alpha, beta, depth + 1)
-            game.undo()
+            game.undo(a,state)
             if v2 < v:
                 v, move = v2, a
                 beta = min(beta, v)

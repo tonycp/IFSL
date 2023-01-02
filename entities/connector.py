@@ -1,4 +1,4 @@
-from cmath import sqrt
+from math import sqrt
 from random import randint
 
 from matplotlib.pyplot import connect
@@ -24,7 +24,7 @@ class StateMannager:
             self.prev_connector_to_swap = None
             self.timer = 0
             self.time_to_wait = 0
-            self.__id = StateMannager.Connector.__id
+            self.id = StateMannager.Connector.__id
             for func in functions:
                 self.__dict__[func.__name__] = func
 
@@ -47,13 +47,12 @@ class StateMannager:
             return self.__current_hp > 0 
 
         def __eq__(self, __o: object) -> bool:
-            return __o is not None and __o.__id == self.__id
+            return __o is not None and __o.id == self.id
         
         def __hash__(self) -> int:
-            return self.__id
-
+            return self.id
         def __repr__(self) -> str:
-            return str(self.__id)
+            return str(self.id)
     
     def __init__(self, map, agents_units_positions):
         self.map = map
@@ -64,12 +63,16 @@ class StateMannager:
         self.swap_notifications = []
         self.attack_notifications = []
         self.current_log = []
-        for ag, units in agents_units_positions:
+        for ag, formations in agents_units_positions:
             self.agents.append(ag)
-            for unit,position in units:
-                connector = self.create_connector(ag,unit,position)
-                ag.connect(connector)
-                map[position].unit = connector
+            for units, formation in formations:
+                connectors = []
+                for unit, position in units:
+                    connector = self.create_connector(ag,unit,position)
+                    map[position].unit = connector
+                    connectors.append(connector)
+                ag.connect(connectors, formation)
+            
 
 
     def create_connector(self,agent,unit:Unit,position):
@@ -82,11 +85,7 @@ class StateMannager:
             problem = ViewProblem(self.roadmap)
             filter = lambda x: not self.map[x.state].is_empty and self.map[x.state].unit.agent.id != agent.id
             adj = lambda x: expand(problem, x)
-
-            view = set()
-            for state in [x.get_position() for x in agent.connectors.values()]:
-                view = view.union([self.map[node.state].unit for node in breadth_first_search(NodeTree(state=state), filter, adj, None, self.map[state].unit.unit.get_vision_radio)])
-            agent.decide(view)
+            agent.decide(lambda state, vision: list(map(lambda x: x.state, breadth_first_search(NodeTree(state=state), filter, adj, None, vision))))
             
         # Ejecutar las acciones
         log = self.__exec_actions()
@@ -103,11 +102,11 @@ class StateMannager:
         for connector, num_dir in  self.not_move_log:
             index = -1
             for i in range(len(ia_list)):
-                if(ia_list[i] == connector.ia):
+                if(ia_list[i] == connector.agent):
                     index = i
                     break
             if index == -1:
-                ia_list.append(connector.ia)
+                ia_list.append(connector.agent)
                 connectors_by_ia.append([(connector,int_to_direction(num_dir))])
             else:
                 connectors_by_ia[index].append((connector,int_to_direction(num_dir)))
@@ -207,11 +206,16 @@ class StateMannager:
                     if(not (type(next_node) is Node)):
                         self.not_move_subtree(current_node,not_move_log)
                         break
+                    if(next_node.state == "Root"):
+                        node_states[current_node.state[2]].visited = True
+                        next_node.actions.append(current_node)
+                        break
                     # Si se mueve en direccion contraria a la que se mueve otro adyacente
                     if(abs(next_node.state[0].prev_dir - current_node.state[0].prev_dir) == 4):
                         self.not_move_subtree(current_node,not_move_log)
                         self.not_move_subtree(next_node,not_move_log)
                         break
+
                     elif(next_node.state[2] == -1):
                         connector, num_dir,_ = next_node.state
                         next_node.state = (connector, num_dir,current_node.state[2])
@@ -276,19 +280,19 @@ class StateMannager:
                 move_log.append(self.map[connector.get_position()])
                 move_log.append(self.map[other_connector.get_position()])
     
-    def exec_attack(self,log):
+    def exec_attack(self, log):
         for connector, pos_i, pos_j in self.attack_notifications:
-            other_connector = self.map[pos_i,pos_j].unit
-            was_alive = other_connector.is_connected()
+            other_connector = self.map[pos_i, pos_j].unit
             if(other_connector):
+                was_alive = other_connector.is_connected()
                 if(other_connector.state == STATES.Stand):
                     other_connector.update_health_points(other_connector.get_health_points - connector.unit.get_damage)
                 else:
-                    if(randint(1,other_connector.unit.get_get_move_cost + connector.unit.get_get_move_cost) <= other_connector.unit.get_get_move_cost):
+                    if(connector.unit.get_move_cost == inf or randint(1,other_connector.unit.get_move_cost + connector.unit.get_move_cost) <= other_connector.unit.get_move_cost):
                         other_connector.update_health_points(other_connector.get_health_points - connector.unit.get_damage)
 
-            if(was_alive and not other_connector.is_connected or not was_alive and other_connector.is_connected):
-                log.append(other_connector.get_position())
+                if(was_alive and not other_connector.is_connected or not was_alive and other_connector.is_connected):
+                    log.append(other_connector.get_position())
 
 
     def is_valid_move(self,connector: Connector,num_dir : int):
@@ -305,7 +309,7 @@ class StateMannager:
         if self.is_valid_move(connector,num_dir):
             self.move_notifications.append((connector,num_dir))
         else:
-            self.not_move_log.append(self.map[(connector,direction)])
+            self.not_move_log.append((connector, direction))
 
 
     def notify_not_move(self,connector : Connector):
@@ -336,11 +340,11 @@ class StateMannager:
         connector.prev_connector_to_swap = None
         connector.prev_dir = None
         
-    def notify_attack(self,connector:Connector,pos_i,pos_j):
-        i, j = connector.get_pos()
-        height, width = self.map.shape()
-        if(pos_i < height and pos_j < width and discrete_distance(i,j,pos_i,pos_j) <= connector.get_attack_range):
-            self.attack_notifications.append((connector,pos_i,pos_j))
+    def notify_attack(self, connector:Connector, pos_i, pos_j):
+        i, j = connector.get_position()
+        height, width = self.map.shape
+        if(pos_i < height and pos_j < width and discrete_distance(i, j, pos_i, pos_j) <= connector.unit.get_attack_range):
+            self.attack_notifications.append((connector, pos_i, pos_j))
 
 
     

@@ -2,7 +2,7 @@ from math import inf
 from .connector import StateMannager as S
 from ._units import Knight
 from random import randint
-from .utils import int_to_direction, DIRECTIONS, STATES, I_DIR, J_DIR, norma2
+from .utils import int_to_direction, DIRECTIONS, STATES, I_DIR, J_DIR, norma2, dir_tuple
 from IA.basicAlgorithms import RRAstar, astar_search_problem, RoadMap, breadth_first_search_problem, best_first_search, whcastar_search, hill_climbing
 from IA._definitions import NodeTree, MoveVoronoiProblem, FindVoronoiVertex, path_states, expand, CSP_UncrossedAsignmentTime, evaluate_HillClimbingAsignment
 from IA.formations import *
@@ -11,17 +11,6 @@ import numpy
 
 I_DIR = [-1, -1, 0, 1, 1, 1, 0, -1]
 J_DIR = [0, 1, 1, 1, 0, -1, -1, -1]
-
-dir_tuple = {
-    (-1, 0): DIRECTIONS.N,
-    (-1, 1): DIRECTIONS.NE,
-    (0, 1): DIRECTIONS.E,
-    (1, 1): DIRECTIONS.SE,
-    (1, 0): DIRECTIONS.S,
-    (1, -1): DIRECTIONS.SW,
-    (0, -1): DIRECTIONS.W,
-    (-1, -1): DIRECTIONS.NW
-}
 
 
 class Agent(object):
@@ -88,13 +77,13 @@ class RoadMapMove_IA(object):
     def __init__(self) -> None:
         self.goal = None
 
-    def set_goal(self, connector: S.Connector, goal=None, roadmap= None):
+    def set_goal(self, start, goal=None, roadmap= None):
         self.roadmap = roadmap
         self.goal = goal
         self.path = []
         if goal is not None:
             self.start = True
-            position_start = connector.get_position()
+            position_start = start
             vertexs_state_start = self.roadmap.get_vertex_area(*position_start)
             findproblem_start = FindVoronoiVertex(self.roadmap, vertexs_state_start)
 
@@ -116,7 +105,7 @@ class RoadMapMove_IA(object):
                 astar_search_problem(start, vertexproblem,
                                      lambda n: norma2(n.state, end.state)))[1:]
 
-    def get_move_for(self, connector: S.Connector):
+    def get_move_for(self, poss, view_range):
         # if self.viewrange(self.goal, connector.get_position(), connector.unit.get_vision_radio):              # stay near goal
         #     self.steer_toward(connector)
         # elif self.viewrange(self.goalpath[0], connector.get_position(), connector.unit.get_vision_radio):    # set next subgoal as the target
@@ -126,14 +115,14 @@ class RoadMapMove_IA(object):
         if (len(self.goalpath) == 0 and len(self.path) == 0):
             self.goal = None
         if self.goal is None: return
-        elif len(self.path) == 0 and self.viewrange(self.goalpath[0], connector.get_position(), connector.unit.get_vision_radio):    # set next subgoal as the target
+        elif len(self.path) == 0 and self.viewrange(self.goalpath[0], poss, view_range):    # set next subgoal as the target
             self.subgoal = self.goalpath.pop(0)
-        self.steer_toward(connector)
+        self.steer_toward(poss, view_range)
         return self.path
 
-    def steer_toward(self, connector: S.Connector):
-        if len(self.roadmap.color[connector.get_position()]) >= 3:
-            self.path = self.next_roadmap_path(connector.get_position())
+    def steer_toward(self, poss, view_range):
+        if len(self.roadmap.color[poss]) >= 3:
+            self.path = self.next_roadmap_path(poss)
         elif self.start:
             self.path = self.start_costs[self.subgoal]
             self.start = False
@@ -260,4 +249,4 @@ class ForamtionMoveControl_IA(object):
             if(key.state == STATES.Stand):
                 key.notify_move(key, dir_tuple[direction])
             elif(key.timer > 0):
-                key.notify_move(key, key.prev_dir) 
+                key.notify_move(key, key.prev_dir)
