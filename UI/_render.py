@@ -10,7 +10,7 @@ from entities._units import *
 from IA._definitions import *
 
 class Render:
-    def __init__(self, condition, map: np.matrix = None, width: int = 800, height: int = 600) -> None:
+    def __init__(self, condition, agents, map: np.matrix = None, width: int = 800, height: int = 600) -> None:
         """
         inicializador de clase, crea un screen de dimensiones (width, height)
 
@@ -22,24 +22,8 @@ class Render:
         self.condition = condition
         self.__screen = pg.display.set_mode(size=(width, height))
         self.map = map if map is not None else get_grid(width, height)
-        agent_1, units_1 = Agent(map, (7, 8)), [
-            (Knight(), (0, 0)),
-            (Knight(), (0, 1)),
-            (Knight(), (0, map.shape[1] - 1)),
-            (Knight(), (map.shape[0] - 1,map.shape[1] - 1)),
-            (Knight(), (8,9)),
-            (Knight(), (7,8))
-        ]
-        # agent_2, units_2 = Agent(map, (6, 6)), [
-        #     (Knight(), (6, 6)),
-        # ]
 
-        self.last_state = StateMannager(self.map, [(agent_1, units_1)])
-        formation_1 = TwoRowsFormation(6, (15, 8))
-        # formation_2 = OneFormation((6, 6))
-        
-        agent_1.asign_to_formation(formation=formation_1, conectors=agent_1.connectors)
-        # agent_2.asign_to_formation(formation=formation_2, conectors=agent_2.connectors)
+        self.last_state = StateMannager(self.map, agents)
         
         self.__max_shape_size = max(self.map.shape[1], self.map.shape[0])
         self.__min_screen_size = min(self.__screen.get_size()[0], self.__screen.get_size()[1])

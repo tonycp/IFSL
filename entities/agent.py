@@ -2,7 +2,7 @@ from math import inf
 from .connector import StateMannager as S
 from ._units import Knight
 from random import randint
-from .utils import int_to_direction, DIRECTIONS, STATES, I_DIR, J_DIR, norma2
+from .utils import int_to_direction, DIRECTIONS, STATES, I_DIR, J_DIR, norma2, dir_tuple
 from IA.basicAlgorithms import RRAstar, astar_search_problem, RoadMap, breadth_first_search_problem, best_first_search, whcastar_search, hill_climbing
 from IA._definitions import NodeTree, MoveVoronoiProblem, FindVoronoiVertex, path_states, expand, CSP_UncrossedAsignmentTime, evaluate_HillClimbingAsignment
 from IA.formations import *
@@ -11,17 +11,6 @@ import numpy
 
 I_DIR = [-1, -1, 0, 1, 1, 1, 0, -1]
 J_DIR = [0, 1, 1, 1, 0, -1, -1, -1]
-
-dir_tuple = {
-    (-1, 0): DIRECTIONS.N,
-    (-1, 1): DIRECTIONS.NE,
-    (0, 1): DIRECTIONS.E,
-    (1, 1): DIRECTIONS.SE,
-    (1, 0): DIRECTIONS.S,
-    (1, -1): DIRECTIONS.SW,
-    (0, -1): DIRECTIONS.W,
-    (-1, -1): DIRECTIONS.NW
-}
 
 
 class Agent(object):

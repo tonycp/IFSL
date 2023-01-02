@@ -3,6 +3,8 @@ import numpy as np
 from pygame import Rect, Surface, Color, image
 from pygame.transform import scale
 from entities import Cell, MountainCell, RiverCell, RoadCell, WallCell, GrassCell, Singleton
+from entities._units import Fighter, Explorer, Base, Knight, Pikeman
+from entities.connector import StateMannager
 
 
 default = {
@@ -97,11 +99,28 @@ def get_sprint(newscale: tuple[int, int], Cell: Cell, source: Union[Color, Surfa
     else:
         source = source if source is not None else default[f'Team-{Cell.unit.agent.id}']
         surface = SprintSurface(source, newscale)
-        num = image.load(f".\\contents\\Numbers\\Number{repr(Cell.unit)}.png").convert_alpha()
+        num = image.load(f".\\contents\\Pictures\\{get_name(Cell.unit.unit)}.png").convert_alpha()
         x, y = surface.get_size()
-        surface.blit(scale(num, (x*3/4, y*3/4)), (x/8, y/8))
+        life_backgroud = SprintSurface(Color(0, 100, 0), (x, y*0.10))
+        life = SprintSurface(Color(0, 150, 0), (x * Cell.unit.unit.get_health_points / Cell.unit.get_health_points(), y*0.10))
+        # surface.blit(scale(num, (x*3/4, y*3/4)), (x/8, y/8))
+        surface.blit(scale(num, (x, y)), (0, 0))
+        surface.blit(life_backgroud, (0, y*0.90))
+        surface.blit(life, (0, y*0.90))
         return surface
 
+def get_name(unit):
+    if type(unit) is Knight:
+        return "caballero"
+    if type(unit) is Fighter:
+        return "hacha"
+    if type(unit) is Pikeman:
+        return "lanza"
+    if type(unit) is Explorer:
+        return "lanza2"
+    if type(unit) is Base:
+        return "catapulta"
+    
 
 def transform( sprint: Surface, 
                scale: tuple[int, int], 

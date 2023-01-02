@@ -3,7 +3,7 @@ from IA.basicAlgorithms import RRAstar, RoadMap, whcastar_search
 from entities.agent import RoadMapMove_IA
 from IA.formations import Formation
 from entities.utils import DIRECTIONS, STATES, dir_tuple
-from low_layer import BasicAgent
+from .low_layer import BasicAgent
 import numpy as np
 
 
@@ -21,7 +21,7 @@ class MediumAgentMove:
         self.rrastar_list: list[RRAstar] = None
         self.from_to: list[tuple[int, int]] = None
         self.path: dict[BasicAgent, list[tuple[int, int]]] = None
-        self.max_cost: int = max(agents, key=lambda x: x.get_move_cost())
+        self.max_cost: int = max(map(lambda x: x.get_move_cost(), agents))
         self.events: dict = { 'is_invalid': self._is_invalid, 'end_task': self._end_task, 'solve_invalid': self._solve_invalid }
 
     def go_to_formation(self, poss = None, dirt = None):
@@ -70,8 +70,11 @@ class MediumAgentMove:
     def inform_move():
         pass 
     
-    def inform_view():
-        pass
+    def get_info(self):
+        return self.agents, self.formation
+
+    def inform_view(self, view):
+        return view(self.formation.poss, 10)
 
     def _notify_formation_task(self, path: list[tuple]):
         x, y = self.formation.poss
@@ -106,11 +109,12 @@ class MediumAgentMove:
         self.agents.remove(agent)
 
 class MediumAgentFigth:
-    def __init__(self, agents, oponents):
+    def __init__(self, agents, oponents, map):
         self.agents = agents
         self.oponents = oponents
-        self.stategie = FigthGame()
-        self.availables = agents
+        self.strategie = FigthGame()
+        self.available = agents
+        self.map = map
         self.my_events = { 'is_invalid': self._is_invalid, 'end_task': self._end_task, 'is_dead': self._is_dead}
         
     def asign_figters(self, available_agents, oponents):
@@ -119,20 +123,23 @@ class MediumAgentFigth:
         for ag in available_agents:
             nearest = math.inf
             for oponent in oponents:
-               if norma2(ag.get_position(), oponent.get_position()) < nearest:
+               if norma2(ag.get_position(), oponent) < nearest:
                    best = oponent
             result.append((ag,best))
         return result 
             
-    def view(self, oponents):
-        self.oponents = oponents 
-        
+    def view(self, view):
+        oponents = set()
+        for ag in self.agents:
+            oponents = oponents.union(view(ag.get_position(), 10)) 
+        self.oponents = list(oponents)
+
     def _end_task(self, agent):
-        self.available.append(agent)
+        self.available.add(agent)
         
         
     def _is_invalid(self, agent):
-        self.available.append(agent)
+        self.available.add(agent)
 
     def _is_dead(self, agent):
         self.agents = self.agents.intersection(agent)
@@ -144,30 +151,34 @@ class MediumAgentFigth:
         best_move = {}
         attacks = []
         while recalc:
-            x,y = recalc.pop(0)
-            state = State(map, x.connector,y, bussy[x.__id] or [])
-            value ,action = h_alphabeta_search_solution(self.strategie,state, 3, self.strategie.heuristic)
+            x, y = recalc.pop(0)
+            state = State(self.map, x.connector, self.map[y].unit, bussy.get(x.connector.id) or [])
+            value, action = h_alphabeta_search_solution(self.strategie, state, lambda x, y, z: z >= 3, self.strategie.heuristic)
             if action[0] == "move":
-                bus =  bussy.get(x.connector.__id) or []
+                bus =  bussy.get(x.connector.id) or []
                 bus.append(action[1])
-                bussy[x.connector.__id] = bus 
-                
-                move = best_move.get(action[1]) or (x,y,value)
-                x0,y0,V = move
-                if V < value:
-                    move = (x,y,value)
-                    recalc.append((x0,y0))
+                bussy[x.connector.id] = bus
+
+                move = best_move.get(action[1])
+                if move is not None:
+                    x0,y0,V = move
+                    if V < value:
+                        move = (x,y,value)
+                        recalc.append((x0,y0))
+                    elif value >= V:
+                        recalc.append((x,y))
+                else: move = (x,y,value)
                 best_move[action[1]] = move
             elif action[0] == "attack":
                 attacks.append((x,action[1]))
         self.set_actions(best_move, attacks)
         self.eject_actions()
-    
-                
-                
+
+
+
     def set_actions(self, moves, attacks):
         for x , pos in attacks:
-            x.set_action_list([("attack", pos)], events = self.my_events)
+            x.set_action_list([("attack", pos)], events = self.my_events, rithm= 1)
         for pos, (x,_,_) in moves.items():
             x.set_action_list([("move", pos)], events = self.my_events)
               
