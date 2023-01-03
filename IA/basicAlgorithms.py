@@ -1,10 +1,12 @@
 from itertools import chain
+from msilib import sequence
+from multiprocessing import parent_process
 from queue import PriorityQueue
 import random
 from ._definitions import *
 import entities.utils as util
 import numpy as np
-from math import inf
+from math import ceil, floor, inf
 
 def hill_climbing(goals: list[tuple], cost, iter_count = 30):
     best_sol = goals.copy()
@@ -218,7 +220,7 @@ def slice(start_poss, width, height, filter, is_empty):
     last_cell_parts = []
     last_cell_len = total_cells = 0
     cells_area = []
-    cells_adjacency = {}
+    cell_size = {}
 
     dx, dy = start_poss
     for y in range(height):
@@ -243,16 +245,6 @@ def slice(start_poss, width, height, filter, is_empty):
                     current_cells[connectivities[0]] = last_cells[i]
                 elif connec_len > 1:
                     for j in connectivities:
-                        i_adj, j_adj = cells_adjacency[i], cells_adjacency[j]
-                        
-                        if i_adj is None:
-                            cells_adjacency[i] = []
-                        if j_adj is None:
-                            cells_adjacency[j] = []
-                        
-                        i_adj.append(j)
-                        j_adj.append(i)
-
                         total_cells += 1
                         cells_area.append(0)
                         current_cells[j] = total_cells
@@ -267,18 +259,17 @@ def slice(start_poss, width, height, filter, is_empty):
         for cell, slice in zip(current_cells, cell_parts):
             decomposed[slice[0]: slice[1], y] = cell
             cells_area[cell - 1] += slice[1] - slice[0]
+            size = cell_size.get(cell)
+            if size is None:
+                size = cell_size[cell] = [(slice[0], y), (slice[1], y), None, None]
+            size[2], size[3] = (slice[0], y), (slice[1], y)
+
 
         last_cell_len = cell_len
         last_cell_parts = cell_parts
         last_cells = current_cells
-
-    adjacency_matrix = np.ndarray(shape=(len(cells_area), len(cells_area)), dtype=bool)
-
-    for i in range(len(cells_area)):
-        for j in cells_adjacency[i]:
-            adjacency_matrix[i, j] = True
     
-    return cells_area, decomposed, adjacency_matrix
+    return cells_area, cell_size, decomposed
 
 def end_path(roadmap, x, y):
     if roadmap.distance[x + 1, y] == 0 or roadmap.distance[x + 1, y + 1] == 0 or roadmap.distance[x + 1, y - 1] == 0:
@@ -540,4 +531,275 @@ def DFS(obstacles, distance):
             internalDFS((i, j, _), visited, [color])
 
     return visited, color
+
+def knuth_shuffle(arr):
+    result = [0]*len(arr)
+    for i in range(len(arr)):
+        index = randint(0,len(arr) - 1 - i)
+        result[i] = arr[index]
+        temp = arr[index]
+        arr[index] = arr[len(arr) - 1 - i]
+        arr[len(arr) - 1 - i] = temp
+    return result
+
+def knuth_shuffle_many(length,count):
+    l = [i for i in range(0,length)]
+    return [knuth_shuffle(l) for _ in range(count)]
+
+def create_knuth_shuffle_pob_generator(length,count):
+    def knuth_shuffle_pob_generator():
+        return knuth_shuffle_many(length,count)
+    return knuth_shuffle_pob_generator
+
+def get_min(l,fitness_func):
+    best = None
+    best_fitness = np.infty
+    for item in l:
+        current_fitness = fitness_func(item)
+        if(current_fitness < best_fitness):
+            best_fitness = current_fitness
+            best = item
+    return best, best_fitness
+
+class RouletteWheel_ParentSelector:
+    def __init__(self,gen):
+        self.gen = gen
+        self.sum = sum([item[1][0] for item in gen])
+        self.p = [item[1][0]/self.sum for item in gen]
+        self.arange = np.arange(0,len(self.gen))
+
+    def get_parents_index(self):
+        parent_A_index = np.random.choice(self.arange, p = self.p)
+        parent_B_index = np.random.choice(self.arange, p = self.p)
+        return parent_A_index, parent_B_index
+
+def find_first_non_marked(left,mark,start_index):
+    inc = 1
+    if(left):
+        inc = -1
+    current_index = start_index + inc
+    while(0 <= current_index < len(mark)):
+        if(mark[(current_index)]):
+            current_index += inc
+        else:
+            return current_index
+    return None
+
+
+def create_crossover_cost(distance):
+    def best_cost(current_cell,current_rotation,next_cell):
+        area_list = [next_cell[rot].area for rot in range(4)]
+        best_area = min(area_list)
+        best_cost = np.infty
+        best_rot = -1
+        current_end = current_cell[current_rotation].end if current_cell else None
+        for rot in range(4):
+            cost = area_list[rot] - best_area + distance(current_end,next_cell[rot].start)
+            if(cost < best_cost):
+                best_cost = cost
+                best_rot = rot
+        return best_cost,best_rot
+    return best_cost
+    
+            
+
+def create_crossover_operator(cost_func):
+    def crossover_operator(parent_A : list,parent_B: list,cell_info: list):
+        mark = [False]*len(parent_A)
+        result_cell = []
+        result_rotation = []
+        #Selecting start_cell
+        index_A = randint(0,len(parent_A))
+        cell_index = parent_A[index_A]
+        index_B = parent_B.index(cell_index)
+            
+        result_cell.append(cell_index)
+        mark[cell_index] = True
+        _, prev_rotation = cost_func(None,None ,cell_info[cell_index])
+        result_rotation.append(prev_rotation)
+        #Seleccionar los siguientes
+        
+        for _ in range(1,len(parent_A)):
+            first_left_A = find_first_non_marked(True,mark,index_A)
+            first_right_A = find_first_non_marked(False,mark,index_A)
+            first_left_B = find_first_non_marked(True,mark,index_B)
+            first_right_B = find_first_non_marked(False,mark,index_B)
+            possible_next_list =  [parent_A[first_left_A] if first_left_A else None,
+                                   parent_A[first_right_A] if first_right_A else None,
+                                   parent_B[first_left_B] if first_left_B else None,
+                                   parent_B[first_right_B] if first_right_B else None]
+            best_next_cost = np.infty
+            best_next = -1
+            best_next_rotation = -1
+            for current_cell_index in possible_next_list:
+                if(current_cell_index):
+                    best_option_cost,best_option_rotation = cost_func(cell_info[result_cell[-1]],result_rotation[-1],cell_info[current_cell_index])
+                    if(best_option_cost < best_next_cost):
+                        best_next_cost = best_option_cost
+                        best_next = current_cell_index
+                        best_next_rotation = best_option_rotation
+            result_cell.append(best_next)
+            result_rotation.append(best_next_rotation)
+            mark[best_next] = True
+            index_A = parent_A.index(best_next)
+            index_B = parent_B.index(best_next)
+        return result_cell, result_rotation
+    return crossover_operator
+            
+def mutation_sequence_creator(mutator_list):
+    def mutator(child,cell_info):
+        current_child = child
+        for mut in mutator_list:
+            current_child = mut(current_child,cell_info)
+    return mutator
+
+def swap_mutator(child,cell_info):
+    cells, rotation = child
+    index_A = randint(0,len(cells))
+    index_B = randint(0,len(cells))
+    swap_index(cells,index_A,index_B)
+    swap_index(rotation,index_A,index_B)
+    return (cells,rotation)
+
+
+def swap_index(list,index_a,index_b):
+    temp = list[index_a]
+    list[index_a] = list[index_b]
+    list[index_b] = temp
+    
+
+def invert_list(list,index_a,index_b):
+    length = floor((index_b - index_a)/2)
+    for i in range(length):
+        swap_index(list,index_a + i, index_b - i)
+
+def create_two_opt_mutator(distance, iter_count = np.infty):
+    def two_opt_mutator(child,cell_info):
+        my_iter_count = iter_count
+        cells_index, rotation = child
+        cells = [cell_info[index][rotation[index]] for index in cells_index]
+        change = True
+        while(change and my_iter_count > 0):
+            change = False
+            saliendo = False
+            for i in range(len(cells)):
+                prev_prev = cells[i - 1].end if i != 0 else None
+                for j in range(i + 1,len(cells)):
+                    post_post = cells[j + 1].start if j + 1 < len(child) else None
+                    if(distance(prev_prev,cells[i].start) + distance(cells[j].end,post_post)
+                     > distance(prev_prev,cells[j].start) + distance(cells[i].end,post_post)):
+                        invert_list(cells,i,j)
+                        change = True
+                        saliendo = True
+                        break
+                if(saliendo):
+                    break
+            saliendo = False
+            my_iter_count -= 1
+        return cells,rotation
+    return two_opt_mutator
+        
+def create_fitness_func(distance):
+    def fitness_func(path: list[int], cell_info: list[int]):
+        cell = cell_info[path[0]]
+        mem_cost = np.ndarray(shape = (4,len(path)))
+        mem_prev_rotation = np.ndarray(shape = (4,len(path)))
+        for rot in range(4):
+            mem_cost[rot,0] = distance(None,cell[rot].start) + cell[rot].area
+        for i in range(1, len(path)):
+            current_cell = cell_info[path[i]]
+            prev_cell = cell_info[path[i - 1]]
+            for current_rot in range(4):
+                cell_cost = current_cell[current_rot].area
+                best_cost = np.infty
+                best_rot = -1
+                for prev_rot in range(4):
+                    cost = mem_cost[prev_rot,i-1] + distance(prev_cell[prev_rot].end,current_cell[current_rot].start) + cell_cost
+                    if(cost < best_cost):
+                        best_cost = cost
+                        best_rot = prev_rot
+                mem_cost[current_rot,i] = best_cost
+                mem_prev_rotation[current_rot,i] = best_rot
+        best_rotation = []
+        best_rot = -1
+        best_cost = np.infty
+        for rot  in range(4):
+            if(mem_cost[rot,len(path) - 1] < best_cost):
+                best_cost = mem_cost[rot,len(path) - 1]
+                best_rot = rot
+        best_rotation.append(best_rot)
+        for i in range(len(path) - 1,0,-1):
+            best_rotation.insert(0,mem_prev_rotation[int(best_rotation[0]),i])
+        return best_cost, best_rotation
+    return fitness_func
+
+
+
+
+def GA(pob_generator, parents_selector, crossover_operator,mutation_operator, fitness_func,cell_info, top_generation = 100):
+    current_gen = [(item,fitness_func(item,cell_info)) for item in pob_generator()]
+    ((best,(best_fitness,best_rotation)),_) = get_min(current_gen,lambda item: item[1][0])
+    # obtener el mejor
+    for _ in range(top_generation):
+        #crear la nueva generacion
+        new_gen = []
+        new_gen_parents_selector = parents_selector(current_gen)
+        for _ in range(len(current_gen)):
+            parent_A_index, parent_B_index = new_gen_parents_selector.get_parents_index()
+            parent_A = current_gen[parent_A_index][0]
+            parent_B = current_gen[parent_B_index][0]
+            new_child, _ = mutation_operator(crossover_operator(parent_A,parent_B,cell_info),cell_info)
+            new_child_fitness, new_child_rotation = fitness_func(new_child,cell_info)
+            new_gen.append((new_child,new_child_fitness))
+            if(new_child_fitness < best_fitness):
+                best_fitness = new_child_fitness
+                best_rotation = new_child_rotation
+                best = new_child
+        current_gen = new_gen
+    return best,best_rotation
+
+def create_min_distance(origin_pos):
+    def min_distance(pos_A,pos_B):
+        if(pos_A == None):
+            pos_A = origin_pos
+        if(pos_B == None):
+            return 0
+        i_A,j_A = pos_A
+        i_B,j_B = pos_B
+        return max(abs(i_A - i_B),abs(j_A - j_B))
+    return min_distance
+
+class Cell_Info:
+    class Rotation_Info:
+        def __init__(self,start,end,area):
+            self.start = start
+            self.end = end
+            self.area = area
+
+    def __init__(self,cell_area,cell_size,rotation_func = None):
+        self.cell_area = cell_area
+        self.cell_size = cell_size
+        self.rotations = []
+        if(not rotation_func):
+            rotation_func = Cell_Info.default_rotation_func
+        for rot in range(4):
+            start, end = rotation_func(rot,cell_size)
+            self.rotations.append(Cell_Info.Rotation_Info(start,end,cell_area))
+
+    def default_rotation_func(rot,cell_size):
+        if(rot == 0):
+            return cell_size[0],cell_size[3]
+        elif (rot == 1):
+            return cell_size[1],cell_size[2]
+        elif (rot == 2):
+            return cell_size[2],cell_size[1]
+        elif (rot == 3):
+            return cell_size[3],cell_size[0]
+
+
+    def __getitem__(self,index):
+        return self.rotations[index]
+
+
+
 
