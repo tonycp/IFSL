@@ -221,6 +221,8 @@ def slice(start_poss, width, height, filter, is_empty):
     last_cell_len = total_cells = 0
     cells_area = []
     cell_size = {}
+    cell_floor = {}
+    cell_ceiling = {}
 
     dx, dy = start_poss
     for y in range(height):
@@ -265,11 +267,26 @@ def slice(start_poss, width, height, filter, is_empty):
             size[2], size[3] = (slice[0], y), (slice[1], y)
 
 
+            floor = cell_floor.get(cell)
+            if floor is None:
+                floor = cell_floor[cell] = []
+            ceiling = cell_ceiling.get(cell)
+            if ceiling is None:
+                ceiling = cell_ceiling[cell] = []
+            size = cell_size.get(cell)
+            if size is None:
+                size = cell_size[cell] = [(slice[0], y), (slice[1], y), None, None]
+            
+            cell_floor[cell - 1].append(slice[1])
+            cell_ceiling[cell - 1].append(slice[1])
+            size[2], size[3] = (slice[0], y), (slice[1], y)
+
+
         last_cell_len = cell_len
         last_cell_parts = cell_parts
         last_cells = current_cells
-    
-    return cells_area, cell_size, decomposed
+        
+    return cells_area, cell_size, cell_floor, cell_ceiling, decomposed
 
 def Boustrophedon_path(cell, color, descomposition):
     start, floor, ceiling = cell
@@ -281,31 +298,26 @@ def Boustrophedon_path(cell, color, descomposition):
     index = 0 if horizontal_direction > 0 else len(floor) - 1
     end = 0 if horizontal_direction < 0 else len(floor) - 1
     while horizontal_direction * index < horizontal_direction * end:
-        min_y = ceiling[index]
-        max_y = floor[index]
-        if vertical_direction == "UP" :
-            path.append((index + x, min_y))
-            path.append((index + x, max_y))
-            y = ceiling[index + horizontal_direction]
-            vertical_direction = "DOWN"
-        else :
-            path.append((index + x, max_y))
-            path.append((index + x, min_y))
-            y = floor[index + horizontal_direction]
-            vertical_direction = "UP"
-        path.append((index + x, y))
-        path.append((index + x + horizontal_direction, y))
-        index += 1
+        prev = ceiling if vertical_direction == "UP" else floor
+        next = floor if vertical_direction == "DOWN" else ceiling
+        min_y = prev[index]
+        max_y = next[index]
+        
+        path.append((index + x, min_y))
+        for i in range(min_y, max_y):
+            path.append((index + x, i))
+        y = next[index + horizontal_direction]
 
-    path_length = 0
-    prev_x, prev_y = x, y
-    for x, y in path:
-        path_length += x - prev_x + y - prev_y
-        prev_x, prev_y = x, y
+        for i in range(max_y, y + 1):
+            path.append((index + x, i))
+        path.append((index + x + horizontal_direction, y))
+
+        vertical_direction = "DOWN" if vertical_direction == "UP" else "UP"
+        index += 1
 
     start_point = path[0]
     end_point = path[-1]
-    return start_point, end_point, path, path_length
+    return start_point, end_point, path
 
 def all_Boustrophedon_path(cells, descomposition):
     all_path = []
@@ -313,11 +325,10 @@ def all_Boustrophedon_path(cells, descomposition):
     for cell, color in cells:
         all_path.append(Boustrophedon_path(cell, color, descomposition))
     
-    start = all_path[0][1]
-    result = all_path[0][3].copy()
-    result_length = all_path[0][4]
+    start = all_path[0][0]
+    result = all_path[0][2].copy()
     for i in range(1, len(all_path)):
-        end, next, other_path, other_length = all_path[i]
+        end, next, other_path = all_path[i]
         firter = lambda x: x.state == end
         adj = lambda x: [NodeTree(state=(x.state[0] + dir_x, x.state[1] + dir_y), parent=x, path_cost=x.path_cost + 1) 
                             for dir_x, dir_y in dirs 
@@ -325,31 +336,9 @@ def all_Boustrophedon_path(cells, descomposition):
                                     descomposition[x.state[0] + dir_x, x.state[1] + dir_y] != 0]
         he = lambda x: norma2(x.state, end)
         new_path = path_states(astar_search(NodeTree(state=start), firter, adj, he))
-        result_length += len(new_path) + other_length
         result += new_path + other_path
         start = next
-    return result, result_length
-
-def end_path(roadmap, x, y):
-    if roadmap.distance[x + 1, y] == 0 or roadmap.distance[x + 1, y + 1] == 0 or roadmap.distance[x + 1, y - 1] == 0:
-        return False
-    return True
-
-def update_slice(slice_map, cell_up, cell_down, num_area, parent_up = None, parent_down = None):
-    path_up = NodeTree(state=(cell_up, num_area), parent=parent_up)
-    path_down = NodeTree(state=(cell_down, num_area), parent=parent_down)
-    print_slice(cell_up, cell_down, slice_map, num_area)
-    return path_up, path_down
-
-def print_slice(a, b, slice_map, slice):
-    for i in range(a[0], b[0]):
-        slice_map[i, a[1]] = slice
-
-def jump_obstacles(roadmap, x, y, height, color):
-    i = x
-    while i < height and (roadmap.distance[i, y] == 0 or roadmap.color[i, y] not in color):
-        i += 1
-    return i - 1
+    return result
 
 #*Clase que maneja todo lo relacionado con el roadmap basado en el diagrama Voronoi
 class RoadMap:
