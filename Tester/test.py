@@ -25,12 +25,14 @@ cell_info = []
 for i in range(len(cells_area)):
     cell_info.append(Cell_Info(cells_area[i],cell_size[i + 1]))
 distance = create_min_distance((0,0))
-GA(pob_generator= create_knuth_shuffle_pob_generator(len(cell_info),20),
+best,best_rotation = GA(pob_generator= create_knuth_shuffle_pob_generator(len(cell_info),20),
    parents_selector= RouletteWheel_ParentSelector,
    crossover_operator= create_crossover_operator(create_crossover_cost(distance)),
-   mutation_operator= mutation_sequence_creator([swap_mutator,create_two_opt_mutator(distance)]),
+   mutation_operator= mutation_sequence_creator([swap_mutator,create_two_opt_mutator(distance,200)]),
    fitness_func= create_fitness_func(distance),
    cell_info = cell_info,
    top_generation= 20
     )
+print("Finish")
+
 

@@ -615,13 +615,13 @@ class RouletteWheel_ParentSelector:
         parent_B_index = np.random.choice(self.arange, p = self.p)
         return parent_A_index, parent_B_index
 
-def find_first_non_marked(left,mark,start_index):
+def find_first_non_marked(left,mark,start_index,cells):
     inc = 1
     if(left):
         inc = -1
     current_index = start_index + inc
     while(0 <= current_index < len(mark)):
-        if(mark[(current_index)]):
+        if(mark[(cells[current_index])]):
             current_index += inc
         else:
             return current_index
@@ -651,7 +651,7 @@ def create_crossover_operator(cost_func):
         result_cell = []
         result_rotation = []
         #Selecting start_cell
-        index_A = randint(0,len(parent_A))
+        index_A = randint(0,len(parent_A) - 1)
         cell_index = parent_A[index_A]
         index_B = parent_B.index(cell_index)
             
@@ -662,20 +662,22 @@ def create_crossover_operator(cost_func):
         #Seleccionar los siguientes
         
         for _ in range(1,len(parent_A)):
-            first_left_A = find_first_non_marked(True,mark,index_A)
-            first_right_A = find_first_non_marked(False,mark,index_A)
-            first_left_B = find_first_non_marked(True,mark,index_B)
-            first_right_B = find_first_non_marked(False,mark,index_B)
-            possible_next_list =  [parent_A[first_left_A] if first_left_A else None,
-                                   parent_A[first_right_A] if first_right_A else None,
-                                   parent_B[first_left_B] if first_left_B else None,
-                                   parent_B[first_right_B] if first_right_B else None]
+            first_left_A = find_first_non_marked(True,mark,index_A,parent_A)
+            first_right_A = find_first_non_marked(False,mark,index_A,parent_A)
+            first_left_B = find_first_non_marked(True,mark,index_B,parent_B)
+            first_right_B = find_first_non_marked(False,mark,index_B,parent_B)
+            possible_next_list =  [parent_A[first_left_A] if first_left_A != None else None,
+                                   parent_A[first_right_A] if first_right_A != None else None,
+                                   parent_B[first_left_B] if first_left_B != None else None,
+                                   parent_B[first_right_B] if first_right_B != None else None]
             best_next_cost = np.infty
             best_next = -1
             best_next_rotation = -1
+            last_cost = None
             for current_cell_index in possible_next_list:
-                if(current_cell_index):
+                if(current_cell_index != None):
                     best_option_cost,best_option_rotation = cost_func(cell_info[result_cell[-1]],result_rotation[-1],cell_info[current_cell_index])
+                    last_cost = best_option_cost
                     if(best_option_cost < best_next_cost):
                         best_next_cost = best_option_cost
                         best_next = current_cell_index
@@ -693,12 +695,13 @@ def mutation_sequence_creator(mutator_list):
         current_child = child
         for mut in mutator_list:
             current_child = mut(current_child,cell_info)
+        return current_child
     return mutator
 
 def swap_mutator(child,cell_info):
     cells, rotation = child
-    index_A = randint(0,len(cells))
-    index_B = randint(0,len(cells))
+    index_A = randint(0,len(cells) -1)
+    index_B = randint(0,len(cells) -1)
     swap_index(cells,index_A,index_B)
     swap_index(rotation,index_A,index_B)
     return (cells,rotation)
@@ -715,7 +718,7 @@ def invert_list(list,index_a,index_b):
     for i in range(length):
         swap_index(list,index_a + i, index_b - i)
 
-def create_two_opt_mutator(distance, iter_count = np.infty):
+def create_two_opt_mutator(distance, iter_count = 200):
     def two_opt_mutator(child,cell_info):
         my_iter_count = iter_count
         cells_index, rotation = child
@@ -731,6 +734,8 @@ def create_two_opt_mutator(distance, iter_count = np.infty):
                     if(distance(prev_prev,cells[i].start) + distance(cells[j].end,post_post)
                      > distance(prev_prev,cells[j].start) + distance(cells[i].end,post_post)):
                         invert_list(cells,i,j)
+                        invert_list(cells_index,i,j)
+                        
                         change = True
                         saliendo = True
                         break
@@ -738,14 +743,14 @@ def create_two_opt_mutator(distance, iter_count = np.infty):
                     break
             saliendo = False
             my_iter_count -= 1
-        return cells,rotation
+        return cells_index,rotation
     return two_opt_mutator
         
 def create_fitness_func(distance):
     def fitness_func(path: list[int], cell_info: list[int]):
         cell = cell_info[path[0]]
-        mem_cost = np.ndarray(shape = (4,len(path)))
-        mem_prev_rotation = np.ndarray(shape = (4,len(path)))
+        mem_cost = np.ndarray(shape = (4,len(path)),dtype=int)
+        mem_prev_rotation = np.ndarray(shape = (4,len(path)),dtype= int)
         for rot in range(4):
             mem_cost[rot,0] = distance(None,cell[rot].start) + cell[rot].area
         for i in range(1, len(path)):
@@ -771,7 +776,7 @@ def create_fitness_func(distance):
                 best_rot = rot
         best_rotation.append(best_rot)
         for i in range(len(path) - 1,0,-1):
-            best_rotation.insert(0,mem_prev_rotation[int(best_rotation[0]),i])
+            best_rotation.insert(0,mem_prev_rotation[best_rotation[0],i])
         return best_cost, best_rotation
     return fitness_func
 
@@ -792,7 +797,7 @@ def GA(pob_generator, parents_selector, crossover_operator,mutation_operator, fi
             parent_B = current_gen[parent_B_index][0]
             new_child, _ = mutation_operator(crossover_operator(parent_A,parent_B,cell_info),cell_info)
             new_child_fitness, new_child_rotation = fitness_func(new_child,cell_info)
-            new_gen.append((new_child,new_child_fitness))
+            new_gen.append((new_child,(new_child_fitness,new_child_rotation)))
             if(new_child_fitness < best_fitness):
                 best_fitness = new_child_fitness
                 best_rotation = new_child_rotation
