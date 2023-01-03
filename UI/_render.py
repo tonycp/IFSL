@@ -40,7 +40,7 @@ class Render:
 
         return -> Iterable[list[Cell]]
         """
-        while self.condition:
+        while self.condition():
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     sys.exit()

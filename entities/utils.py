@@ -1,3 +1,4 @@
+from cmath import inf
 from enum import Enum
 
 
@@ -96,3 +97,9 @@ def norma2(n1, n2):
     x1, y1 = n1
     x2, y2 = n2
     return ((x1 - x2)**2 + (y1 - y2)**2)**(0.5)
+
+def norma_inf(a, b):
+    dist = -inf
+    for i in range(len(a)):
+        dist = max(abs(a[i] - b[i]), dist)
+    return dist
