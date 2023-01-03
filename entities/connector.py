@@ -116,6 +116,7 @@ class StateMannager:
         self.move_notifications = []
         self.attack_notifications = []
         self.swap_notifications = []
+        self.not_move_log = []
         return log
 
     def not_move_subtree(self,node, not_move_log):
@@ -284,13 +285,19 @@ class StateMannager:
             if(other_connector):
                 was_alive = other_connector.is_connected()
                 if(other_connector.state == STATES.Stand):
-                    other_connector.update_health_points(other_connector.get_health_points - connector.unit.get_damage)
+                    other_connector.update_health_points(other_connector.get_health_points() - connector.unit.get_damage)
+                    log.append(self.map[other_connector.get_position()])
                 else:
                     if(connector.unit.get_move_cost == inf or randint(1,other_connector.unit.get_move_cost + connector.unit.get_move_cost) <= other_connector.unit.get_move_cost):
-                        other_connector.update_health_points(other_connector.get_health_points - connector.unit.get_damage)
+                        other_connector.update_health_points(other_connector.get_health_points() - connector.unit.get_damage)
+                        log.append(self.map[other_connector.get_position()])
 
-                if(was_alive and not other_connector.is_connected or not was_alive and other_connector.is_connected):
-                    log.append(other_connector.get_position())
+                # if(was_alive and not other_connector.is_connected) or (not was_alive and other_connector.is_connected):
+                if(was_alive and not other_connector.is_connected()):
+                    other_connector.agent.disconnect(other_connector)
+                    position = other_connector.get_position()
+                    self.map[position].unit = None
+                    log.append(self.map[position])
 
 
     def is_valid_move(self,connector: Connector,num_dir : int):
@@ -300,14 +307,14 @@ class StateMannager:
         height, width = self.map.shape
         if not validMove(new_i, new_j, height, width): return False
         cell_to_move = self.map[new_i,new_j]
-        return cell_to_move.crossable(connector.unit) and (not cell_to_move.unit or cell_to_move.unit.timer == (cell_to_move.unit.unit.get_move_cost - 1))        
+        return cell_to_move.crossable(connector.unit)
     
     def notify_move(self, connector : Connector, direction):
         num_dir = direction_to_int(direction)
-        if self.is_valid_move(connector,num_dir):
-            self.move_notifications.append((connector,num_dir))
+        if self.is_valid_move(connector, num_dir):
+            self.move_notifications.append((connector, num_dir))
         else:
-            self.not_move_log.append((connector, direction))
+            self.not_move_log.append((connector, num_dir))
 
 
     def notify_not_move(self,connector : Connector):
@@ -341,7 +348,7 @@ class StateMannager:
     def notify_attack(self, connector:Connector, pos_i, pos_j):
         i, j = connector.get_position()
         height, width = self.map.shape
-        if(pos_i < height and pos_j < width and discrete_distance(i, j, pos_i, pos_j) <= connector.unit.get_attack_range):
+        if(pos_i < height and pos_j < width and norma_inf((i, j), (pos_i, pos_j)) <= connector.unit.get_attack_range):
             self.attack_notifications.append((connector, pos_i, pos_j))
 
 

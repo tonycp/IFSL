@@ -82,32 +82,34 @@ def get_sprint(newscale: tuple[int, int], Cell: Cell, source: Union[Color, Surfa
 
     return -> Surface
     """
-    if Cell.is_empty:
-        source = source if source is not None else default[type(Cell).__name__]
-        if (type(Cell) is MountainCell):
-            return MountainSurface(source, newscale)
-        elif (type(Cell) is RiverCell):
-            return RiverSurface(source, newscale)
-        elif (type(Cell) is RoadCell):
-            return RoadSurface(source, newscale)
-        elif (type(Cell) is WallCell):
-            return WallSurface(source, newscale)
-        elif (type(Cell) is GrassCell):
-            return GrassSurface(source, newscale)
-        else:
-            raise NotImplementedError("Cell type indefinido")
+    source = source if source is not None else default[type(Cell).__name__]
+    surface = None
+    if (type(Cell) is MountainCell):
+        surface = MountainSurface(source, newscale)
+    elif (type(Cell) is RiverCell):
+        surface = RiverSurface(source, newscale)
+    elif (type(Cell) is RoadCell):
+        surface = RoadSurface(source, newscale)
+    elif (type(Cell) is WallCell):
+        surface = WallSurface(source, newscale)
+    elif (type(Cell) is GrassCell):
+        surface = GrassSurface(source, newscale)
     else:
-        source = source if source is not None else default[f'Team-{Cell.unit.agent.id}']
-        surface = SprintSurface(source, newscale)
-        num = image.load(f".\\contents\\Pictures\\{get_name(Cell.unit.unit)}.png").convert_alpha()
+        raise NotImplementedError("Cell type indefinido")
+
+    if not Cell.is_empty:
+        draw = image.load(f".\\contents\\Pictures\\{get_name(Cell.unit.unit)}.png").convert_alpha()
+        background_draw = image.load(f".\\contents\\Pictures\\{get_name(Cell.unit.unit)}.png").convert_alpha()
         x, y = surface.get_size()
-        life_backgroud = SprintSurface(Color(0, 100, 0), (x, y*0.10))
-        life = SprintSurface(Color(0, 150, 0), (x * Cell.unit.unit.get_health_points / Cell.unit.get_health_points(), y*0.10))
-        # surface.blit(scale(num, (x*3/4, y*3/4)), (x/8, y/8))
-        surface.blit(scale(num, (x, y)), (0, 0))
-        surface.blit(life_backgroud, (0, y*0.90))
+        
+        life_background = SprintSurface(Color(150, 0, 0), (x, y*0.10))
+        life = SprintSurface(Color(0, 150, 0), (x * Cell.unit.get_health_points() / Cell.unit.unit.get_health_points, y*0.10))
+        
+        surface.blit(scale(background_draw, (x, y)), (0, 0))
+        surface.blit(scale(draw, (x*3/4, y*3/4)), (x/8, y/8))
+        surface.blit(life_background, (0, y*0.90))
         surface.blit(life, (0, y*0.90))
-        return surface
+    return surface
 
 def get_name(unit):
     if type(unit) is Knight:

@@ -1,7 +1,7 @@
 from random import randint
 import numpy as np
 import math
-from entities.utils import DIRECTIONS, I_DIR, J_DIR, validMove, norma2, validMove, int_to_direction
+from entities.utils import DIRECTIONS, I_DIR, J_DIR, norma_inf, validMove, norma2, validMove, int_to_direction
 from collections import defaultdict
 
 
@@ -51,14 +51,14 @@ class ViewProblem(Problem):
 
     def is_goal(self, state):
         """True if the goal level is in any one of the jugs."""
-        return state in self.goals    
+        return state in self.goals
 
 class FindVertex(ViewProblem):
     def actions(self, state):
         """The actions executable in this state."""
         x, y = state
         dirs = [(dirvar.name, (I_DIR[dirvar.value - 1], J_DIR[dirvar.value - 1])) for dirvar in DIRECTIONS]
-        return [(name, move) for name, move in dirs 
+        return [(name, move) for name, move in dirs
                                     if validMove(x + move[0], y + move[1], self.dim_x, self.dim_y) and self.roadmap.distance[x + move[0], y + move[1]] != 0]
 
 class FindWithAgent(FindVertex):
@@ -442,15 +442,16 @@ class FigthGame(Game):
             player1, player2 = player2,player1
         actions =[]
         x,y = player1["pos"][-1]
-        
-        for z in range(0,len(I_DIR)):
-            i = I_DIR[z]
-            j = J_DIR[z]
-            if((x + i, y + j) not in state.bussy and validMove(x + i, y + j, state.map.shape[0], state.map.shape[1]) and (state.map[x + i, y + j].is_empty or player1["pos"][0] == (x + i, y + j))):
-                    actions.append(("move", (x + i, y + j)))
         x2,y2 = player2["pos"][-1]
-        if norma2((x,y),(x2,y2)) < player1["attack"]:
+        if norma_inf((x,y),(x2,y2)) <= player1["attack"]:
             actions.append(("attack", (x2, y2)))
+        if player1["move"] != infinity:
+            for z in range(0,len(I_DIR)):
+                i = I_DIR[z]
+                j = J_DIR[z]
+                if((x + i, y + j) not in state.bussy and validMove(x + i, y + j, state.map.shape[0], state.map.shape[1]) and (state.map[x + i, y + j].is_empty or player1["pos"][0] == (x + i, y + j))):
+                        actions.append(("move", (x + i, y + j)))
+        actions.append(("wait", (x, y)))
         return actions
     
     def result(self, state, move):
@@ -464,11 +465,14 @@ class FigthGame(Game):
         if action == "move":
             player1["pos"].append(direction)
         elif action == "attack":
-            times = 0
-            for _ in range(0,200):
-                if randint(1, player1["move"] + player2["move"]) <= player2["move"]:
-                    times+=1
-            player2["hp"].append(player2["hp"][-1] - player1["dmg"] * times/200)
+            if player1["move"] == infinity or player2["move"] == infinity:
+                player2["hp"].append(player2["hp"][-1] - player1["dmg"])
+            else:
+                times = 0
+                for _ in range(0,200):
+                    if randint(1, player1["move"] + player2["move"]) <= player2["move"]:
+                        times+=1
+                player2["hp"].append(player2["hp"][-1] - player1["dmg"] * times/200)
         state.to_move = player2["id"]
         return state
             
@@ -492,19 +496,19 @@ class FigthGame(Game):
         h = player2["hp"][0] - player2["hp"][-1]
         
         #penalizar valor si pierdes al oponente de vista
-        if norma2(player1["pos"][-1], player2["pos"][-1]) > player1["view"]:
+        if norma_inf(player1["pos"][-1], player2["pos"][-1]) > player1["view"]:
             h -= 10
          
         #penalizar si se va de tu rango de ataque   
-        if norma2(player1["pos"][-1], player2["pos"][-1]) > player1["attack"]:
+        if norma_inf(player1["pos"][-1], player2["pos"][-1]) > player1["attack"]:
             h -= 5
         
         #bonificar si tienes al oponente dentro de tu rango de ataque pero el no te puede atacar a ti
-        if player1["attack"] >= norma2(player1["pos"][-1], player2["pos"][-1]) >= player2["attack"]:
+        if player1["attack"] >= norma_inf(player1["pos"][-1], player2["pos"][-1]) >= player2["attack"]:
             h += 10
         
         #bonificar si el oponente esta en tu rango de ataque
-        if norma2(player1["pos"][-1], player2["pos"][-1]) <= player1["attack"]:
+        if norma_inf(player1["pos"][-1], player2["pos"][-1]) <= player1["attack"]:
             h += 5
 
         return h
@@ -522,7 +526,7 @@ class FigthGame(Game):
             player1["pos"].pop()
         state.to_move = player1["id"]
               
-                      
+
 class State(defaultdict):
     
     def __init__(self, map, connector1, connector2, bussy =None, **kwds):
@@ -532,7 +536,7 @@ class State(defaultdict):
         self.p1["hp"] = [connector1.get_health_points()]
         self.p1["view"] = connector1.unit.get_vision_radio
         self.p1["dmg"] = connector1.unit.get_damage
-        self.p1["move"] = min(100, connector1.unit.get_move_cost)
+        self.p1["move"] = connector1.unit.get_move_cost
         self.p1["pos"] = [connector1.get_position()] 
         
         
@@ -542,7 +546,7 @@ class State(defaultdict):
         self.p2["hp"] = [connector2.get_health_points()]
         self.p2["view"] = connector2.unit.get_vision_radio
         self.p2["dmg"] = connector2.unit.get_damage
-        self.p2["move"] = min(100 ,connector2.unit.get_move_cost)
+        self.p2["move"] = connector2.unit.get_move_cost
         self.p2["pos"] = [connector2.get_position()] 
         
         self.to_move = connector1.id

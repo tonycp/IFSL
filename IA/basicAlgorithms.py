@@ -280,6 +280,65 @@ def slice(start_poss, width, height, filter, is_empty):
     
     return cells_area, decomposed, adjacency_matrix
 
+def Boustrophedon_path(cell, color, descomposition):
+    start, floor, ceiling = cell
+    x, y = start
+    vertical_direction = "UP" if descomposition[x - 1, y] == color else "DOWN"
+    horizontal_direction = -1 if descomposition[x, y - 1] == color else 1
+
+    path = []
+    index = 0 if horizontal_direction > 0 else len(floor) - 1
+    end = 0 if horizontal_direction < 0 else len(floor) - 1
+    while horizontal_direction * index < horizontal_direction * end:
+        min_y = ceiling[index]
+        max_y = floor[index]
+        if vertical_direction == "UP" :
+            path.append((index + x, min_y))
+            path.append((index + x, max_y))
+            y = ceiling[index + horizontal_direction]
+            vertical_direction = "DOWN"
+        else :
+            path.append((index + x, max_y))
+            path.append((index + x, min_y))
+            y = floor[index + horizontal_direction]
+            vertical_direction = "UP"
+        path.append((index + x, y))
+        path.append((index + x + horizontal_direction, y))
+        index += 1
+
+    path_length = 0
+    prev_x, prev_y = x, y
+    for x, y in path:
+        path_length += x - prev_x + y - prev_y
+        prev_x, prev_y = x, y
+
+    start_point = path[0]
+    end_point = path[-1]
+    return start_point, end_point, path, path_length
+
+def all_Boustrophedon_path(cells, descomposition):
+    all_path = []
+    dirs = [(I_DIR[dirvar.value - 1], J_DIR[dirvar.value - 1]) for dirvar in DIRECTIONS]
+    for cell, color in cells:
+        all_path.append(Boustrophedon_path(cell, color, descomposition))
+    
+    start = all_path[0][1]
+    result = all_path[0][3].copy()
+    result_length = all_path[0][4]
+    for i in range(1, len(all_path)):
+        end, next, other_path, other_length = all_path[i]
+        firter = lambda x: x.state == end
+        adj = lambda x: [NodeTree(state=(x.state[0] + dir_x, x.state[1] + dir_y), parent=x, path_cost=x.path_cost + 1) 
+                            for dir_x, dir_y in dirs 
+                                if util.validMove(x.state[0] + dir_x, x.state[1] + dir_y, *descomposition.shape) and 
+                                    descomposition[x.state[0] + dir_x, x.state[1] + dir_y] != 0]
+        he = lambda x: norma2(x.state, end)
+        new_path = path_states(astar_search(NodeTree(state=start), firter, adj, he))
+        result_length += len(new_path) + other_length
+        result += new_path + other_path
+        start = next
+    return result, result_length
+
 def end_path(roadmap, x, y):
     if roadmap.distance[x + 1, y] == 0 or roadmap.distance[x + 1, y + 1] == 0 or roadmap.distance[x + 1, y - 1] == 0:
         return False
@@ -294,12 +353,6 @@ def update_slice(slice_map, cell_up, cell_down, num_area, parent_up = None, pare
 def print_slice(a, b, slice_map, slice):
     for i in range(a[0], b[0]):
         slice_map[i, a[1]] = slice
-
-def norma_inf(a, b):
-    dist = -inf
-    for i in range(len(a)):
-        dist = max(abs(a[i] - b[i]), dist)
-    return dist
 
 def jump_obstacles(roadmap, x, y, height, color):
     i = x

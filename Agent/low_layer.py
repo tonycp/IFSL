@@ -19,12 +19,15 @@ class BasicAgent:
         self.is_invalid =False
         self.action_list = action_list or self.action_list
         self.rithm = rithm or self.rithm
+        self.current_time = self.rithm
         self.events = events or self.events
         
     def invalid_move(self, move):
         self.is_invalid = True
         self.events['is_invalid'](self)
 
+    def is_dead(self):
+        self.events["is_dead"](self)
 
     def get_position(self):
         return self.connector.get_position()
@@ -34,11 +37,6 @@ class BasicAgent:
           
     def eject_action(self):
         """ejecutar una accion por el conector"""
-        
-        #Si el conector esta muerto informar y no hacer nada
-        if not self.connector.is_connected():
-            self.events["id_dead"](self)
-            return
             
         #Si la accion anterior fue invalida y se pide que ejecute rehacer la accion
         if self.is_invalid:
@@ -56,10 +54,10 @@ class BasicAgent:
         
         #se incrementa el contador de tiempo
         if self.current_time < self.rithm: 
-            self.current_time+=1
+            self.current_time += 1
         
         #si se llego al tiempo marcado por el ritmo se cambia de accion
-        if  self.current_time == self.rithm:        
+        if  self.current_time == self.rithm:      
             if self.action_list: 
 
                 self.prev = self.action_list.pop(0)
@@ -85,5 +83,5 @@ class BasicAgent:
         return hash(self.connector)
     
     def __eq__(self, __o: object):
-        return __o is not None and self.connector.__id == __o.connector.__id
+        return __o is not None and self.connector.id == __o.connector.id
                 

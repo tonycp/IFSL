@@ -1,4 +1,5 @@
-from ._definitions import Node
+from ._definitions import Node, CSP_UncrossedAsignmentTime, evaluate_HillClimbingAsignment
+from .basicAlgorithms import hill_climbing
 from entities.utils import *
 
 class Formation:
@@ -76,7 +77,18 @@ class Formation:
         self.nodes[self.main].rotate(rot_times,self.nodes[self.main].position, updates)
         for key, pos in updates:
             self.nodes[key].rotate(rot_times,pos,updates)
-            
+
+    def asign_formation(self, start):
+        goal = [pos.position for pos in self.nodes if pos.state != self.main]
+        csp = CSP_UncrossedAsignmentTime(start, goal)
+        csp.back_track_solving()
+        if csp.asignment:
+            from_to = [(y,x) for x,y in csp.asignment.items()]
+        else:
+            cost = lambda x: evaluate_HillClimbingAsignment(csp, start, x, alpha= 10)
+            best = hill_climbing(goal, cost, 100)
+            from_to = list(zip(start, best))
+        return from_to            
 
 class TwoRowsFormation(Formation):
     
