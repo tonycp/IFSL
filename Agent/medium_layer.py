@@ -127,8 +127,6 @@ class MediumAgentMove:
 
     def _notify_move(self):
         agents = self.agents
-        if len(self.invalidate):
-            agents = self.invalidate
         for unit in agents:
             unit.eject_action()
         self.invalidate.clear()

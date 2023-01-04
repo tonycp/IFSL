@@ -55,6 +55,7 @@ class BasicAgent:
         #se incrementa el contador de tiempo
         if self.current_time < self.rithm: 
             self.current_time += 1
+            return
         
         #si se llego al tiempo marcado por el ritmo se cambia de accion
         if  self.current_time == self.rithm:
