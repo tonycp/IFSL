@@ -526,8 +526,10 @@ class FigthGame(Game):
             player1["pos"].pop()
         state.to_move = player1["id"]
               
+class GroupGameFigth(FigthGame):
+    
 
-class State(defaultdict):
+class State:
     
     def __init__(self, map, connector1, connector2, bussy =None, **kwds):
         self.p1 ={} 
@@ -552,7 +554,13 @@ class State(defaultdict):
         self.to_move = connector1.id
         self.bussy =bussy
         self.map = map
-            
+
+class Group_State(State):
+
+    def __init__(self, map, connector1, connector2, alliads, enemies, bussy=None, **kwds):
+        self.alliads = alliads 
+        self.enemies = enemies
+        State.__init__(self, map, connector1, connector2, bussy, **kwds)          
     
 def h_alphabeta_search_solution(game, state, cutoff, h):
     player = state.to_move
