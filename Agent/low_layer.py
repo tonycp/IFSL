@@ -14,8 +14,8 @@ class BasicAgent:
         self.prev = None
         self.is_invalid =False
         
-    def set_action_list(self,action_list = None, rithm = None, events = None):
-        self.prev = None
+    def set_action_list(self,action_list = None, rithm = None, events = None, change_prev = False):
+        self.prev = None if change_prev else self.prev
         self.is_invalid =False
         self.action_list = action_list or self.action_list
         self.rithm = 0 if rithm is None else rithm

@@ -396,7 +396,7 @@ class MediumAgentFigth:
     #     self.set_actions(best_move, attacks, wait)
     #     self.eject_actions()
     
-    def figth_in_formation(self):
+    def figth_in_formation(self, ocupation_table, current_time):
         bussy = {}
         free = []
         best_move = {}
@@ -419,7 +419,7 @@ class MediumAgentFigth:
                 current_busy = []
                 current_busy+=bussy.get(agent.connector.id) or []
                 current_busy +=  gen_bussy
-                state = Group_State(self.map, agent.connector, self.alliads,self.oponents, attack,alliadslen, current_busy)
+                state = Group_State(self.map, agent.connector, self.alliads,self.oponents, attack,alliadslen,current_time, current_busy, ocupation_table)
                 value, state = h_alphabeta_search_solution(self.strategie,state,lambda x, y, z: z >= 2,self.strategie.heuristic)
                 
                 if state is not None:
@@ -471,7 +471,7 @@ class MediumAgentFigth:
 
     def set_actions(self, actions):
         for x , (action, pos) in actions:
-            x.set_action_list([(action, pos)], events = self.my_events, rithm= 0)
+            x.set_action_list([(action, pos)], events = self.my_events, rithm= 0, change_prev = True)
 
               
     def eject_actions(self):
