@@ -197,17 +197,18 @@ def whcastar_search(goals: list[(tuple, tuple)], rrastar_list: list[RRAstar], ro
 def slice(start_poss, width, height, filter, is_empty):
     def get_connectivities(slice, filter, is_empty):
         cell_parts = []
+        valid = False
         start = -1
         for i, point in enumerate(slice):
-            if not filter(*point): continue
-            if not is_empty(*point) and start != -1:
+            if not (is_empty(*point) and filter(*point)) and start != -1:
                 cell_parts.append((start, i))
                 start = -1
-            elif is_empty(*point) and start == -1:
+            elif is_empty(*point) and filter(*point) and start == -1:
                 start = i
+                valid = True
         if start != -1:
             cell_parts.append((start, len(slice)))
-        return cell_parts
+        return cell_parts, valid
 
     def get_adjacency_matrix(left_parts, right_parts):
         return np.array([[min(left_part[1], right_part[1]) - max(left_part[0], right_part[0]) > 0 
@@ -219,74 +220,76 @@ def slice(start_poss, width, height, filter, is_empty):
     last_cells = []
     last_cell_parts = []
     last_cell_len = total_cells = 0
-    cells_area = []
     cell_size = {}
     cell_floor = {}
     cell_ceiling = {}
 
     dx, dy = start_poss
-    for y in range(height):
-        slice = [(dx + x, dy + y) for x in range(width)]
-        cell_parts = get_connectivities(slice, filter, is_empty)
+    for x in range(width):
+        slice = [(dx + x, dy + y) for y in range(height)]
+        cell_parts, valid = get_connectivities(slice, filter, is_empty)
         cell_len = len(cell_parts)
         current_cells = []
 
-        if last_cell_len == 0:    
+        if not valid:
+            last_cell_len = 0
+            last_cell_parts = []
+            last_cells = []
+            continue
+
+        if last_cell_len == 0:
             for _ in cell_parts:
                 total_cells += 1
-                cells_area.append(0)
                 current_cells.append(total_cells)
         elif cell_len != 0:
             matrix = get_adjacency_matrix(last_cell_parts, cell_parts)
             current_cells = [0] * len(cell_parts)
 
-            for i in range(last_cell_len):
-                connectivities = [j for j, condition in enumerate(matrix[i, :]) if condition]
-                connec_len = len(connectivities)
-                if connec_len == 1:
-                    current_cells[connectivities[0]] = last_cells[i]
-                elif connec_len > 1:
-                    for j in connectivities:
-                        total_cells += 1
-                        cells_area.append(0)
-                        current_cells[j] = total_cells
-
             for j in range(cell_len):
                 connec_len = np.sum(matrix[:, j])
                 if connec_len > 1 or connec_len == 0:
+                    if current_cells[j] != 0:
+                        continue
                     total_cells += 1
-                    cells_area.append(0)
                     current_cells[j] = total_cells
 
+            for i in range(last_cell_len):
+                connectivities = [j for j, condition in enumerate(matrix[i, :]) if condition]
+                connec_len = len(connectivities)
+                if connec_len == 1 and current_cells[connectivities[0]] == 0:
+                    current_cells[connectivities[0]] = last_cells[i]
+                elif connec_len > 1:
+                    for j in connectivities:
+                        if current_cells[j] != 0:
+                            continue
+                        total_cells += 1
+                        current_cells[j] = total_cells
+
         for cell, slice in zip(current_cells, cell_parts):
-            decomposed[slice[0]: slice[1], y] = cell
-            cells_area[cell - 1] += slice[1] - slice[0]
+            decomposed[x, slice[0]:slice[1]] = cell
             size = cell_size.get(cell)
-            if size is None:
-                size = cell_size[cell] = [(slice[0], y), (slice[1], y), None, None]
-            size[2], size[3] = (slice[0], y), (slice[1], y)
-
-
             floor = cell_floor.get(cell)
+            ceiling = cell_ceiling.get(cell)
+
+            if size is None:
+                size = cell_size[cell] = [(dx + x, dy + slice[0]), (dx + x, dy + slice[1] - 1), 
+                                          (dx + x, dy + slice[0]), (dx + x, dy + slice[1] - 1)]
             if floor is None:
                 floor = cell_floor[cell] = []
-            ceiling = cell_ceiling.get(cell)
             if ceiling is None:
                 ceiling = cell_ceiling[cell] = []
-            size = cell_size.get(cell)
-            if size is None:
-                size = cell_size[cell] = [(slice[0], y), (slice[1], y), None, None]
-            
-            cell_floor[cell - 1].append(slice[1])
-            cell_ceiling[cell - 1].append(slice[1])
-            size[2], size[3] = (slice[0], y), (slice[1], y)
 
+            size[3] = (dx + x, dy + slice[1] - 1)
+            size[2] = (dx + x, dy + slice[0])
+            floor.append(dy + slice[1] - 1)
+            ceiling.append(dy + slice[0])
 
         last_cell_len = cell_len
         last_cell_parts = cell_parts
         last_cells = current_cells
+            
         
-    return cells_area, cell_size, cell_floor, cell_ceiling, decomposed
+    return cell_size, cell_floor, cell_ceiling, decomposed
 
 def Boustrophedon_path(cell, color, descomposition):
     start, floor, ceiling = cell
@@ -345,7 +348,7 @@ class RoadMap:
     
     def __init__(self, worldMap, unit) -> None:
         self.unit = unit
-        self.vertex, self.distance, self.color, self.roads, self.areas, self.adjacents, self.size = RoadMap.RoadMapGVD(worldMap,unit)
+        self.vertex, self.distance, self.color, self.roads, self.areas, self.adjacents, self.size, self.color_num = RoadMap.RoadMapGVD(worldMap,unit)
         
     def get_road(self, v1, v2):
         (x1,y1) = v1
@@ -546,7 +549,7 @@ class RoadMap:
 
                     queue.append((dx, dy, d + 1))           
                     edges.add((dx, dy))
-        return vertex, distance, color, roads, vertex_area, adj, size
+        return vertex, distance, color, roads, vertex_area, adj, size, num_colors + 4
 
 
 def DFS(obstacles, distance):
@@ -642,8 +645,7 @@ def create_crossover_cost(distance):
                 best_rot = rot
         return best_cost,best_rot
     return best_cost
-    
-            
+
 
 def create_crossover_operator(cost_func):
     def crossover_operator(parent_A : list,parent_B: list,cell_info: list):
@@ -818,20 +820,60 @@ def create_min_distance(origin_pos):
 
 class Cell_Info:
     class Rotation_Info:
-        def __init__(self,start,end,area):
+        def __init__(self, start, end, path, area):
             self.start = start
             self.end = end
+            self.path = path
             self.area = area
 
-    def __init__(self,cell_area,cell_size,rotation_func = None):
-        self.cell_area = cell_area
+    def __init__(self, cell_size, cell_ceiling, cell_floor):
         self.cell_size = cell_size
+        self.cell_floor = cell_floor
+        self.cell_ceiling = cell_ceiling
         self.rotations = []
-        if(not rotation_func):
-            rotation_func = Cell_Info.default_rotation_func
-        for rot in range(4):
-            start, end = rotation_func(rot,cell_size)
-            self.rotations.append(Cell_Info.Rotation_Info(start,end,cell_area))
+
+        for rot in range(2):
+            start, end, path_1, cell_area = self._get_path(cell_size[rot], rot)
+            path_2 = path_1.copy()
+            path_2.reverse()
+            self.rotations.append(Cell_Info.Rotation_Info(start, end, path_1, cell_area))
+            self.rotations.append(Cell_Info.Rotation_Info(end, start, path_2, cell_area))
+
+    def _get_path(self, start, vertical_direction):
+        path = []
+        x, y = start
+        index, end = 0, len(self.cell_floor)
+        while index < end:
+            prev, next = (self.cell_floor, self.cell_ceiling) if not vertical_direction else (self.cell_ceiling, self.cell_floor)
+
+            path.append((index + x, prev[index]))
+            if prev[index] != next[index]:
+                path.append((index + x, next[index]))
+
+            if index + 1 >= end:
+                break
+            elif not vertical_direction and next[index] > next[index + 1]:
+                path.append((index + x, next[index + 1]))
+            elif vertical_direction and next[index] < next[index + 1]:
+                path.append((index + x, next[index + 1]))
+            elif not vertical_direction and next[index] < next[index + 1]:
+                path.append((index + x + 1, next[index]))
+            elif vertical_direction and next[index] > next[index + 1]:
+                path.append((index + x + 1, next[index]))
+
+            index += 1
+            y = next[index]
+            vertical_direction = not vertical_direction
+
+        path_length = 1
+        prev_x, prev_y = path[0]
+        for x, y in path:
+            path_length += abs(x - prev_x + y - prev_y)
+            prev_x, prev_y = x, y
+
+        start_point = path[0]
+        end_point = path[-1]
+        return start_point, end_point, path, path_length
 
     def default_rotation_func(rot,cell_size):
         if(rot == 0):
@@ -846,7 +888,3 @@ class Cell_Info:
 
     def __getitem__(self,index):
         return self.rotations[index]
-
-
-
-

@@ -39,7 +39,7 @@ class Fighter(Unit, metaclass=Singleton):
 class Archer(Unit, metaclass=Singleton):
 
     def __init__(self):
-        Unit.__init__(self,5,60,10,1000,2)
+        Unit.__init__(self,5,60,6,1000,2)
         
     @property
     def weakness(self, other):
@@ -47,7 +47,7 @@ class Archer(Unit, metaclass=Singleton):
 
 class Knight(Unit, metaclass=Singleton):
     def __init__(self):
-        Unit.__init__(self,1,120,7,1000,1)
+        Unit.__init__(self,1,120,5,1000,1)
         
     @property
     def weakness(self, other):
@@ -56,7 +56,7 @@ class Knight(Unit, metaclass=Singleton):
 class Pikeman(Unit, metaclass=Singleton):
 
     def __init__(self):
-        Unit.__init__(self,2,90,5,1000,3)
+        Unit.__init__(self,2,90,4,1000,3)
         
     @property
     def weakness(self, other):
@@ -65,7 +65,7 @@ class Pikeman(Unit, metaclass=Singleton):
 class Explorer(Unit, metaclass=Singleton):
 
     def __init__(self):
-        Unit.__init__(self,1,40,12,1000,2)
+        Unit.__init__(self,1,40,7,1000,2)
         
     @property
     def weakness(self, other):
@@ -73,7 +73,7 @@ class Explorer(Unit, metaclass=Singleton):
 
 class Base(Unit, metaclass=Singleton):
     def __init__(self):
-        Unit.__init__(self,5,100,15,8000, inf)
+        Unit.__init__(self,5,100,7,8000, inf)
         
     @property
     def weakness(self, other):

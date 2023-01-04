@@ -1,9 +1,9 @@
-from IA._definitions import *
 from IA.basicAlgorithms import RRAstar, RoadMap, whcastar_search
-from entities.agent import RoadMapMove_IA
+from entities.utils import DIRECTIONS
 from IA.formations import Formation
-from entities.utils import DIRECTIONS, STATES, dir_tuple
 from .low_layer import BasicAgent
+from IA._definitions import *
+from Agent.ia import *
 import numpy as np
 
 
@@ -12,7 +12,7 @@ class MediumAgentMove:
         self.id = id
         self.dirt: DIRECTIONS = formation.dir
         self.events = events
-        self.ia = RoadMapMove_IA() # Move_IA
+        self.ia: Path_Move_IA = None
         self.formation = formation
         self.invalidate = set()
         self.available = set()
@@ -59,28 +59,58 @@ class MediumAgentMove:
 
 
     def move_in_formation(self, poss = None):
+        new_goal = False
+        if type(self.ia) is not RoadMapMove_IA:
+            new_goal = True
+            self.ia = RoadMapMove_IA()
         if poss is not None and self.ia.goal != poss:
             self.ia.set_goal(self.formation.poss, poss, self.roadmap)
 
-        if not len(self.invalidate) and len(self.available) == len(self.agents):
-            path = self.ia.get_move_for(self.formation.poss, 2) # cambiar vision
-            if path:
-                self._notify_formation_task(path)
+        self._in_formation(new_goal)
+    
+    def explore_in_formation(self, area, size):
+        new_goal = False
+        if type(self.ia) is not SliceMapMove_IA:
+            new_goal = True
+            self.ia = SliceMapMove_IA()
+        if area is not None and size is not None and self.ia.goal != (area, size):
+            self.ia.set_goal(self.formation.poss, (area, size), self.roadmap)
+        
+        self._in_formation(new_goal)
+    
+    def _in_formation(self, new_goal):
+        if not len(self.invalidate) and (new_goal or len(self.available) == len(self.agents)):
+            self.path = self.ia.get_move_for(self.formation.poss)
+            if self.path:
+                self.available.clear()
+                self._notify_formation_task(self.path)
             return
         self._notify_move()
-    
+
     def get_info(self):
         return self.agents, self.formation
 
     def inform_view(self, view):
-        return view(self.formation.poss, 10)
+        oponents = set()
+        for ag in self.agents:
+            oponents = oponents.union(view(ag.get_position(), 10))
+        return list(oponents)
 
     def _notify_formation_task(self, path: list[tuple]):
         x, y = self.formation.poss
+        self.formation.set_in(*path[-1])
         dirts = [(next_x - x, next_y - y) for next_x, next_y in path]
-        for unit in self.agents.values():
+        for unit in self.agents:
+            actions = []
             x, y = unit.get_position()
-            actions = [("move", (x + dx, y + dy)) for dx, dy in dirts]
+            prev_move = unit.get_position()
+            for dx, dy in dirts:
+                move = (x + dx, y + dy)
+                if prev_move == move:
+                    actions.append(("wait", move))
+                else:
+                    actions.append(("move", move))
+                prev_move = move
             unit.set_action_list(actions, self.max_cost - unit.get_move_cost(), self.low_events)
 
     def _notify_task(self, paths: list[tuple[BasicAgent, tuple]]):

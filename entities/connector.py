@@ -176,7 +176,7 @@ class StateMannager:
             connector, num_dir = self.move_notifications[index]
             if(not connector.is_connected):
                 continue
-            if(not connector.prev_dir or connector.prev_dir != num_dir or connector.state != STATES.Moving):
+            if(connector.prev_dir is None or connector.prev_dir != num_dir or connector.state != STATES.Moving):
                 connector.timer = connector.unit.get_move_cost
                 connector.prev_dir = num_dir
                 connector.state = STATES.Moving
@@ -188,7 +188,7 @@ class StateMannager:
         for index in moved_nodes:
             connector, num_dir = self.move_notifications[index]
             i, j = connector.get_position()
-            if self.map[i,j].unit.state[2] != -1:
+            if type(self.map[i,j].unit) is StateMannager.Connector or self.map[i,j].unit.state[2] != -1:
                 continue
             self.map[i,j].unit.state = (connector,num_dir,len(node_states))
             node_states.append(NodeState())

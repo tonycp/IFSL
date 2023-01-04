@@ -90,8 +90,8 @@ def int_to_direction(direction):
     elif direction == 7:
         return DIRECTIONS.NW
     
-def validMove(x,y, lenx, leny): 
-    return  x >= 0 and x < lenx and y >= 0 and y < leny
+def validMove(x, y, max_x, max_y, min_x = 0, min_y = 0): 
+    return  x >= min_x and x < max_x and y >= min_y and y < max_y
 
 def norma2(n1, n2):
     x1, y1 = n1

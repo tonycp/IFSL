@@ -6,7 +6,6 @@ from entities import Cell, MountainCell, RiverCell, RoadCell, WallCell, GrassCel
 from entities._units import Fighter, Explorer, Base, Knight, Pikeman
 from entities.connector import StateMannager
 
-
 default = {
     'MountainCell': Color(255, 196, 70),
     'RiverCell': Color(116, 116, 255),
@@ -72,7 +71,7 @@ class GrassSurface(SprintSurface, metaclass=Singleton):
         return SprintSurface.__init__(self, source, *args, **kwargs)
 
 
-def get_sprint(newscale: tuple[int, int], Cell: Cell, source: Union[Color, Surface] = None) -> Surface:
+def get_sprint(newscale: tuple[int, int], Cell: Cell, source: Union[Color, Surface] = None, first_time = False) -> Surface:
     """
     dado un tipo de Celda retorna su representante en sprint
 
@@ -93,13 +92,18 @@ def get_sprint(newscale: tuple[int, int], Cell: Cell, source: Union[Color, Surfa
     elif (type(Cell) is WallCell):
         surface = WallSurface(source, newscale)
     elif (type(Cell) is GrassCell):
-        surface = GrassSurface(source, newscale)
+        if first_time:
+            surface = GrassSurface(source, newscale)
+        else:
+            surface = SprintSurface(Color(59, 100, 53), newscale)
     else:
         raise NotImplementedError("Cell type indefinido")
 
     if not Cell.is_empty:
-        draw = image.load(f".\\contents\\Pictures\\{get_name(Cell.unit.unit)}.png").convert_alpha()
-        background_draw = image.load(f".\\contents\\Pictures\\{get_name(Cell.unit.unit)}.png").convert_alpha()
+        surface = surface.copy()
+        name_color = "Blue" if Cell.unit.agent.id == 1 else "Red"
+        draw = image.load(f".\\contents\\icons\\{type(Cell.unit.unit).__name__}.png").convert_alpha()
+        background_draw = image.load(f".\\contents\\BG\\{name_color}BG{type(Cell.unit.unit).__name__}.png").convert_alpha()
         x, y = surface.get_size()
         
         life_background = SprintSurface(Color(150, 0, 0), (x, y*0.10))
@@ -110,19 +114,6 @@ def get_sprint(newscale: tuple[int, int], Cell: Cell, source: Union[Color, Surfa
         surface.blit(life_background, (0, y*0.90))
         surface.blit(life, (0, y*0.90))
     return surface
-
-def get_name(unit):
-    if type(unit) is Knight:
-        return "caballero"
-    if type(unit) is Fighter:
-        return "hacha"
-    if type(unit) is Pikeman:
-        return "lanza"
-    if type(unit) is Explorer:
-        return "lanza2"
-    if type(unit) is Base:
-        return "catapulta"
-    
 
 def transform( sprint: Surface, 
                scale: tuple[int, int], 

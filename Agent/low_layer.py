@@ -1,4 +1,4 @@
-from entities.utils import STATES
+from entities.utils import *
 from entities.agent import *
 
 class BasicAgent:
@@ -18,7 +18,7 @@ class BasicAgent:
         self.prev = None
         self.is_invalid =False
         self.action_list = action_list or self.action_list
-        self.rithm = rithm or self.rithm
+        self.rithm = self.rithm if rithm is None else rithm
         self.current_time = self.rithm
         self.events = events or self.events
         
@@ -47,7 +47,7 @@ class BasicAgent:
             return
         
         #Si la accion tarda mas de 1 turno en ejecutarse y aun no se ha ejecutado ejecutarla
-        if(self.prev is not None and self.prev[0]=="move" and self.connector.state != STATES.Stand and  self.connector.timer > 0):
+        if(self.prev is not None and self.prev[0]=="move" and self.connector.state != STATES.Stand and self.connector.timer > 0):
             direction = dir_tuple[(self.prev[1][0] - self.connector.get_position()[0], self.prev[1][1] - self.connector.get_position()[1])]
             self.connector.notify_move(self.connector, direction)
             return
@@ -57,7 +57,7 @@ class BasicAgent:
             self.current_time += 1
         
         #si se llego al tiempo marcado por el ritmo se cambia de accion
-        if  self.current_time == self.rithm:      
+        if  self.current_time == self.rithm:
             if self.action_list: 
 
                 self.prev = self.action_list.pop(0)
@@ -74,7 +74,7 @@ class BasicAgent:
                 
                 #si es wait esperar
                 elif self.prev[0] == "wait":
-                    self.current_time = 0
+                    self.current_time = - self.connector.unit.get_move_cost
             
             else: 
                 self.events['end_task'](self)

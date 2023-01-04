@@ -58,7 +58,6 @@ class Formation:
         
         if main_position:
             self.set_in(*main_position)
-        self.poss = self.nodes[main].position
     
     def set_in(self, x,y):
         updates = []
@@ -88,7 +87,11 @@ class Formation:
             cost = lambda x: evaluate_HillClimbingAsignment(csp, start, x, alpha= 10)
             best = hill_climbing(goal, cost, 100)
             from_to = list(zip(start, best))
-        return from_to            
+        return from_to
+
+    @property
+    def poss(self):
+        return self.nodes[self.main].position
 
 class TwoRowsFormation(Formation):
     

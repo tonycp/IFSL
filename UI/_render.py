@@ -20,6 +20,7 @@ class Render:
         width -> ancho del screen
         """
         self.condition = condition
+        self.first_time = True
         self.__screen = pg.display.set_mode(size=(width, height))
         self.map = map if map is not None else get_grid(width, height)
 
@@ -46,7 +47,7 @@ class Render:
                     sys.exit()
             yield self.last_state.exec_round()  # new state
 
-    def start(self, time: int = 3) -> None:
+    def start(self, time: int = 10) -> None:
         """
         start se encarga de recorrer la simulación hasta el final después de que pygame haya iniciado
 
@@ -55,6 +56,7 @@ class Render:
         clock = pg.time.Clock()
         for i in self:
             self.update(i)
+            self.first_time = False
             clock.tick(time)
 
     def update(self, state: list[Cell]) -> bool:
@@ -64,7 +66,7 @@ class Render:
         return -> bool
         """
         for Cell in state:
-            sprint = get_sprint(self.__scale, Cell)
+            sprint = get_sprint(self.__scale, Cell, first_time=self.first_time)
             pos = transform(sprint, self.__scale, Cell.location, self.__shape_correction, self.__screan_correction)
             try:
                 self.__screen.blit(sprint, pos)
