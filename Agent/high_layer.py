@@ -8,6 +8,8 @@ from entities.connector import StateMannager as S
 from IA.formations import Formation, OneFormation, TwoRowsFormation
 from random import shuffle
 
+from entities.utils import norma_inf
+
 class HighAgent:
     percent_explorer = 0.25
     def __init__(self, map, roadmap: RoadMap, formations: dict[int, tuple[set, Formation]], base):
@@ -136,7 +138,6 @@ class HighAgent:
         pass
 
     def _end_fight(self, poss, id):
-        self.troops.pop(id)
         agents = self.formations[id][0]
 
         if id == -1:
@@ -149,11 +150,13 @@ class HighAgent:
                     self.formations[id] = agents, OneFormation(poss)
                 else:
                     self.formations[id] = agents, TwoRowsFormation(num_units, poss)
+            self.troops[id] = MediumAgentMove(agents, self.formations[id][1], self.roadmap, self.low_events, id)
             self.in_misison[id].insert(0, (poss, "go_to_formation"))
     
     def _end_explore(self, poss, id):
         self.in_misison[id].append(poss, "explore")
 
     def set_figth(self, id, troop, enemy):
-        self.in_misison[id].insert(0, (troop.formation.poss, "fight"))
-        self.go_to_enemies(id, troop.formation.poss)
+        nearest = min(enemy, key=lambda x: norma_inf(x, self.troops[id].formation.poss))
+        self.in_misison[id] = [(nearest, "fight")]
+        self.go_to_enemies(id, nearest)

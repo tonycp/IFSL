@@ -9,7 +9,7 @@ class BasicAgent:
         self.rithm = rithm
         if rithm is None: 
             self.rithm = connector.unit.get_move_cost
-        self.current_time = self.rithm
+        self.current_time = 0
         self.events = events
         self.prev = None
         self.is_invalid =False
@@ -19,7 +19,7 @@ class BasicAgent:
         self.is_invalid =False
         self.action_list = action_list or self.action_list
         self.rithm = self.rithm if rithm is None else rithm
-        self.current_time = self.rithm
+        self.current_time = 0
         self.events = events or self.events
         
     def invalid_move(self, move):

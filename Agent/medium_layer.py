@@ -25,6 +25,7 @@ class MediumAgentMove:
         self.from_to: list[tuple[int, int]] = None
         self.path: dict[BasicAgent, list[tuple[int, int]]] = None
         self.max_cost: int = max(map(lambda x: x.get_move_cost(), agents))
+        self.time: int = self.max_cost
         self.low_events: dict = { 'is_invalid': self._is_invalid, 'end_task': self._end_task }
 
     def go_to_formation(self, poss = None, dirt = None):
@@ -53,10 +54,19 @@ class MediumAgentMove:
 
         if not len(self.invalidate) and (new_goal or len(self.available) == len(self.agents)):
             self.available.clear()
+            self.from_to, self.rrastar_list = MediumAgentMove.order(self.from_to, self.rrastar_list)
             self.path = whcastar_search(goals = self.from_to, roadmap=self.roadmap, rrastar_list=self.rrastar_list, w=8)
             self._notify_task(self.path.items())
         self._notify_move()
 
+    def order(goals, rrastar_list):
+        newgoals, newarrastar_list = [], []
+        zip_goals = list(zip(goals, rrastar_list))
+        zip_goals.sort(key=lambda x: x[0][0] == x[0][1])
+        for goal, rrastar in zip_goals:
+            newgoals.append(goal)
+            newarrastar_list.append(rrastar)
+        return newgoals, newarrastar_list
 
     def move_in_formation(self, poss = None):
         new_goal = False
@@ -75,7 +85,7 @@ class MediumAgentMove:
             self.ia = SliceMapMove_IA()
         if area is not None and size is not None and self.ia.goal != (area, size):
             self.ia.set_goal(self.formation.poss, (area, size), self.roadmap)
-        
+
         self._in_formation(new_goal)
     
     def _in_formation(self, new_goal):
@@ -85,6 +95,7 @@ class MediumAgentMove:
                 self.available.clear()
                 self._notify_formation_task(self.path)
             return
+        self._update_formation()
         self._notify_move()
 
     def get_info(self):
@@ -98,7 +109,6 @@ class MediumAgentMove:
 
     def _notify_formation_task(self, path: list[tuple]):
         x, y = self.formation.poss
-        self.formation.set_in(*path[-1])
         dirts = [(next_x - x, next_y - y) for next_x, next_y in path]
         for unit in self.agents:
             actions = []
@@ -124,6 +134,15 @@ class MediumAgentMove:
                     actions.append(("move", move))
                 prev_move = move
             unit.set_action_list(actions, self.max_cost - unit.get_move_cost(), self.low_events)
+
+    def _update_formation(self):
+        if self.time == 0 and not len(self.invalidate) and len(self.path):
+            self.time = self.max_cost - 1
+            self.formation.set_in(*self.path.pop(0))
+        elif self.time == 0:
+            self.time = self.max_cost - 1
+        else:
+            self.time -= 1
 
     def _notify_move(self):
         agents = self.agents
