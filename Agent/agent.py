@@ -33,7 +33,7 @@ class Agent(object):
     def disconnect(self, connector: S.Connector):
         self.agents.pop(connector).is_dead()
 
-    def decide(self, view):
+    def decide(self, view, filter1, filter2):
         if self.ia is None:
             self.ia = HighAgent(self.map, self.roadmap, self.formations, self.base)
-        self.ia.decide(view)
+        self.ia.decide(view, filter1, filter2)
