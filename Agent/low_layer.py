@@ -8,7 +8,7 @@ class BasicAgent:
         self.action_list = action_list
         self.rithm = rithm
         if rithm is None: 
-            self.rithm = connector.unit.get_move_cost
+            self.rithm = 0
         self.current_time = 0
         self.events = events
         self.prev = None
@@ -18,7 +18,7 @@ class BasicAgent:
         self.prev = None
         self.is_invalid =False
         self.action_list = action_list or self.action_list
-        self.rithm = self.rithm if rithm is None else rithm
+        self.rithm = 0 if rithm is None else rithm
         self.current_time = 0
         self.events = events or self.events
         
@@ -37,7 +37,10 @@ class BasicAgent:
           
     def eject_action(self):
         """ejecutar una accion por el conector"""
-            
+        if not self.connector.is_connected():    
+            self.is_dead()
+            return
+
         #Si la accion anterior fue invalida y se pide que ejecute rehacer la accion
         if self.is_invalid:
             self.is_invalid = False
@@ -75,7 +78,7 @@ class BasicAgent:
                 
                 #si es wait esperar
                 elif self.prev[0] == "wait":
-                    self.current_time = - self.connector.unit.get_move_cost
+                    self.current_time = 0 if self.connector.unit.get_move_cost == inf else -self.connector.unit.get_move_cost
             
             else: 
                 self.events['end_task'](self)

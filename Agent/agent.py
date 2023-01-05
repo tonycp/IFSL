@@ -28,7 +28,8 @@ class Agent(object):
      
     def invalidations(self, invalidated_conectors: list[tuple[S.Connector, tuple]]):
         for connector, move in invalidated_conectors:
-            self.agents[connector].invalid_move(move)
+            if connector.is_connected():
+                self.agents[connector].invalid_move(move)
     
     def disconnect(self, connector: S.Connector):
         self.agents.pop(connector).is_dead()

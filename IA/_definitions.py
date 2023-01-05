@@ -437,6 +437,7 @@ class FigthGame(Game):
     def actions(self, state):
         player = state.to_move
         state.p = state.p1
+        player1 = state.p1
         player2 = state.p2
         if player == player2["id"]:
             player1, player2 = player2,player1
@@ -490,26 +491,28 @@ class FigthGame(Game):
         player1 = state.p1
         player2 = state.p2
         if player == player2["id"]:
-            player1, player2 = player2,player1
+            player1, player2 = player2, player1
         
+        dist_enemy = norma_inf(player1["pos"][-1], player2["pos"][-1])
+
         #bonificar la reduccion de vida del oponente
         h = player2["hp"][0] - player2["hp"][-1]
         
         #penalizar valor si pierdes al oponente de vista
-        if norma_inf(player1["pos"][-1], player2["pos"][-1]) > player1["view"]:
-            h -= 10
-         
+        if dist_enemy > player1["view"]:
+            h -= 10 * dist_enemy
+
         #penalizar si se va de tu rango de ataque   
-        if norma_inf(player1["pos"][-1], player2["pos"][-1]) > player1["attack"]:
-            h -= 5
+        if dist_enemy > player1["attack"]:
+            h -= 5 * dist_enemy
         
         #bonificar si tienes al oponente dentro de tu rango de ataque pero el no te puede atacar a ti
-        if player1["attack"] >= norma_inf(player1["pos"][-1], player2["pos"][-1]) >= player2["attack"]:
-            h += 10
+        if player1["attack"] >= dist_enemy >= player2["attack"]:
+            h += 10 / dist_enemy
         
         #bonificar si el oponente esta en tu rango de ataque
-        if norma_inf(player1["pos"][-1], player2["pos"][-1]) <= player1["attack"]:
-            h += 5
+        if dist_enemy <= player1["attack"]:
+            h += 5 / dist_enemy
 
         return h
          
@@ -554,20 +557,21 @@ class State:
 
 class Group_State:
 
-    def __init__(self, map, connector, alliads, enemies, attacks, bussy=None, **kwds):
-        self.alliads_attacks = np.ndarray(shape=len(alliads), dtype=int) 
-        self.alliads_moves = np.ndarray(shape=len(alliads), dtype=int) 
-        self.enemies_attacks = np.ndarray(shape=len(enemies), dtype=int) 
+    def __init__(self, map, connector, alliads, enemies, attacks,alliadslen, bussy=None, **kwds):
+        self.alliads_attacks = np.zeros(shape=len(alliads), dtype=int) 
+        self.alliads_moves = np.zeros(shape=len(alliads), dtype=int) 
+        self.enemies_attacks = np.zeros(shape=len(enemies), dtype=int) 
         self.attacks = attacks
-        self.enemies_pos_and_range =np.ndarray(shape=len(alliads)) 
+        self.alliadslen = alliadslen
+        self.enemies_pos_and_range =np.ndarray(shape=len(enemies), dtype=tuple) 
         acumulator= 0
-        
+        self.enemy_bussy = []
         for j in range(len(enemies)):
             
             en = enemies[j]
             acumulator += en.get_health_points()
             self.enemies_pos_and_range[j] = (en.get_position(), en.unit.get_attack_range, en.get_health_points(), en.unit.get_damage)
-            
+            self.enemy_bussy.append(en.get_position())
             for i in range(len(alliads)):
                 a= alliads[i]
                 distance = norma_inf(a.get_position(), en.get_position())
@@ -577,20 +581,20 @@ class Group_State:
                 if distance <=  en.unit.get_attack_range: 
                     self.enemies_attacks[j]+=1
         
-        self.enemies_total_live= [acumulator]
+        self.enemies_total_live = [acumulator - attacks]
         
         self.alliads_pos_and_range =np.ndarray(shape=len(alliads))
         acumulator = 0
         for n in range(len(alliads)):
-            a= alliads[x]
+            a = alliads[n]
             acumulator += a.get_health_points()
             self.alliads_pos_and_range[n] = a.unit.get_damage
             x,y = a.get_position()
             for z in range(0,len(I_DIR)):
                     i = I_DIR[z]
                     j = J_DIR[z]
-                    if validMove(x + i, y + j, map.shape[0],map.shape[1]) and map[x + i, y + j].is_empty:
-                        self.alliads_moves[i] +=1
+                    if validMove(x + i, y + j, map.shape[0],map.shape[1]) and (x + i, y + j) not in bussy:
+                        self.alliads_moves[n] +=1
 
         self.p ={} 
         self.p["attack"] = connector.unit.get_attack_range
@@ -611,20 +615,20 @@ class GroupFigthGame(Game):
     
     def utility(self, state, player):
         if self.is_terminal(state):
-            if player== "warrior" and state.enemies_total_live[-1] <=0:
+            if player == "warrior" and state.enemies_total_live[-1] <=0:
                 return 10000
             return -10000
         return 0
     
-    def actions(self, state):
+    def actions(self, state, depth):
         player = state.to_move
         actions =[]
+        player1= state.p
+        x,y = player1["pos"][-1]
         if player == "warrior":
-            player1= state.p
-            x,y = player1["pos"][-1]
             hbest = infinity
             pbest=None
-            for (x2,y2), _ ,h in state.enemies_pos_and_range:
+            for (x2,y2), _,h ,_ in state.enemies_pos_and_range:
                 if norma_inf((x,y),(x2,y2)) <= player1["attack"] and h < hbest:
                     pbest = (x2,y2)
                     hbest =h 
@@ -633,39 +637,60 @@ class GroupFigthGame(Game):
             for z in range(0,len(I_DIR)):
                 i = I_DIR[z]
                 j = J_DIR[z]
-                if((x + i, y + j) not in state.bussy and validMove(x + i, y + j, state.map.shape[0], state.map.shape[1]) and (state.map[x + i, y + j].is_empty or player1["pos"][0] == (x + i, y + j))):
-                        actions.append(("move", (x + i, y + j)))
-            actions.append(("wait", (x, y)))
-        else: 
+                if(((x + i, y + j) not in state.bussy or depth >= 1)) and (x + i, y + j) not in state.enemy_bussy and validMove(x + i, y + j, state.map.shape[0], state.map.shape[1]):
+                    actions.append(("move", (x + i, y + j)))
+            if not actions:
+                actions.append(("wait", (x, y)))
+        else:
            actions.append(("tower", (x, y))) 
         return actions
 
     def result(self, state, move):
         action, direction = move 
-        if action != "tower":
-            state.p["pos"].append(direction)
+        
+        if action != "tower" and action != "wait":
             total_attack = 0
             for i in range(len(state.alliads_moves)):
                 prob =state.alliads_attacks[i]/(state.alliads_moves[i] + state.alliads_attacks[i]+1)
                 dmg = state.alliads_pos_and_range[i]
                 if randint(0,100)/100 < prob:
                     total_attack += dmg
-            state.enemies_total_live.append(state.enemies_total_live[-1]- total_attack)
+            state.enemies_total_live.append(state.enemies_total_live[-1] - total_attack)
 
             if action == "move":
                 state.p["pos"].append(direction)
-            else:
+
+                if state.p["move"] > 1:
+
+                    total_attack = 0
+                    for i in range(len(state.enemies_attacks)):
+                        pos, ran, _ , dmg= state.enemies_pos_and_range[i]
+                        prob = (1 if norma_inf(state.p["pos"][-1], pos) <= ran else 0)/(state.enemies_attacks[i] + 1)
+                        if prob > 0 and randint(0,100)/100 < prob:
+                            total_attack += dmg
+                    state.p["hp"].append(state.p["hp"][-1]- (total_attack*(state.p["move"] -1 )))
+            
+            elif action == "attack":
                 state.enemies_total_live[-1]-= state.p["dmg"]
         
-        else: 
+        else:
             total_attack = 0
             for i in range(len(state.enemies_attacks)):
                 pos, ran, _ , dmg= state.enemies_pos_and_range[i]
                 prob = (1 if norma_inf(state.p["pos"][-1], pos) <= ran else 0)/(state.enemies_attacks[i] + 1)
                 if prob > 0 and randint(0,100)/100 < prob:
                     total_attack += dmg
-            state.p["hp"].append(state.p["hp"][-1]- total_attack )
+            state.p["hp"].append(state.p["hp"][-1]- total_attack)
+            
+            if action == "wait":
+                state.p["hp"][-1]-=total_attack
 
+                # for i in range(len(state.alliads_moves)):
+                #     prob =state.alliads_attacks[i]/(state.alliads_moves[i] + state.alliads_attacks[i]+1)
+                #     dmg = state.alliads_pos_and_range[i]
+                #     if randint(0,100)/100 < prob:
+                #         total_attack += dmg
+                # state.enemies_total_live.append(state.enemies_total_live[-1] - total_attack)
 
         state.to_move = "warrior" if state.to_move == "towers" else "towers"
         return state
@@ -673,11 +698,11 @@ class GroupFigthGame(Game):
     def undo(self, action, state):
         name, _ = action
         if  name == "attack":
-            state.enemies_total_live["hp"].pop()
+            state.enemies_total_live.pop()
         elif name == "move":
-            state.enemies_total_live["hp"].pop()
+            state.enemies_total_live.pop()
             state.p["pos"].pop()
-        else: 
+        elif name== "tower" or name== "wait": 
             state.p["hp"].pop()
         state.to_move = "warrior" if name == "tower" else "tower"
 
@@ -685,26 +710,37 @@ class GroupFigthGame(Game):
 
         if player == "warrior":
             #bonificar la reduccion de vida del oponente
-            h = state.enemies_total_live[0] - state.enemies_total_live[-1]
-
-
-            for pos,rng,_,_ in state.enemies_pos_and_range: 
+            enemy_life  =(state.enemies_total_live[0] - state.enemies_total_live[-1])
+            h = enemy_life * 100 if enemy_life >= state.enemies_total_live[0]/len(state.enemies_attacks) else enemy_life
+            
+            if state.p["move"] > 1 and any(state.p["attack"] > rng for _,rng,_,_ in state.enemies_pos_and_range ):
+                h-= state.p["hp"][0]- state.p["hp"][-1]
+            
+            for pos, rng, _, _ in state.enemies_pos_and_range: 
                 
+                dist_enemy = norma_inf(state.p["pos"][-1], pos)
+
                 #bonificar si el oponente esta en tu rango de ataque
-                if norma_inf(state.p["pos"][-1], pos) <= state.p["attack"]:
-                    h += 5
+                if dist_enemy <= state.p["attack"]:
+                    h += 10 / (abs(state.p["attack"] - dist_enemy)+1)
                 
+                if dist_enemy <= state.p["attack"] and state.alliadslen >=4 :
+                    h += 100 / (abs(state.p["attack"] - dist_enemy)+1)
+
                 #bonificar si tienes al oponente dentro de tu rango de ataque pero el no te puede atacar a ti
-                if state.p["attack"] >= norma_inf(state.p["pos"][-1], pos) >= rng:
-                    h += 10
+                if state.p["attack"] >= dist_enemy > rng:
+                    h += 10  / dist_enemy
                 
                 #penalizar valor si pierdes al oponente de vista
-                if norma_inf(state.p["pos"][-1], pos) > state.p["view"]:
-                    h -= 10
+                if dist_enemy > state.p["view"]:
+                    h -= 10 * dist_enemy 
 
                 #penalizar si se va de tu rango de ataque   
-                if norma_inf(state.p["pos"][-1], pos) > state.p["attack"]:
-                    h -= 5
+                if dist_enemy > state.p["attack"] and state.alliadslen >=2 :
+                    h -= 5* (abs(state.p["attack"] - dist_enemy)+1)
+
+                if dist_enemy > state.p["attack"] and state.alliadslen >=4 :
+                    h -= 10 *(abs(state.p["attack"] - dist_enemy)+1)
         else: 
             h = state.p["hp"][0] - state.p["hp"][-1]
         return h
@@ -720,14 +756,16 @@ def h_alphabeta_search_solution(game, state, cutoff, h):
         if cutoff(game, state, depth):
             return h(state, player), None
         v, move = -infinity, None
-        for a in game.actions(state):
+        for a in game.actions(state, depth):
             v2, _ = min_value(game.result(state, a), alpha, beta, depth+1)
+            print(f"MAX: {player} hizo {a} con valor {v2}")
             game.undo(a,state)
             if v2 > v:
                 v, move = v2, a
                 alpha = max(alpha, v)
             if v >= beta:
                 return v, move
+        print(f"el resultado de MAX fue: {player} hizo {move} con valor {v}")
         return v, move
 
     def min_value(state, alpha, beta, depth):
@@ -736,14 +774,16 @@ def h_alphabeta_search_solution(game, state, cutoff, h):
         if cutoff(game, state, depth):
             return h(state, player), None
         v, move = +infinity, None
-        for a in game.actions(state):
+        for a in game.actions(state,depth):
             v2, _ = max_value(game.result(state, a), alpha, beta, depth + 1)
+            print(f"MIN: {player} hizo {a} con valor {v2}")
             game.undo(a,state)
             if v2 < v:
                 v, move = v2, a
                 beta = min(beta, v)
             if v <= alpha:
                 return v, move
+        print(f"el resultado de MIN fue: {player} hizo {move} con valor {v}")
         return v, move
 
     return max_value(state, -infinity, +infinity, 0)
