@@ -67,7 +67,7 @@ class MediumAgentMove:
     def order(goals, rrastar_list):
         newgoals, newarrastar_list = [], []
         zip_goals = list(zip(goals, rrastar_list))
-        zip_goals.sort(key=lambda x: x[0][0] == x[0][1])
+        zip_goals.sort(key=lambda x: x[0][0].get_position() == x[0][1])
         for goal, rrastar in zip_goals:
             newgoals.append(goal)
             newarrastar_list.append(rrastar)
@@ -242,7 +242,7 @@ class MediumAgentMove:
     def inform_view(self, view):
         oponents = set()
         for ag in self.agents:
-            oponents = oponents.union(view(ag.get_position(), 10))
+            oponents = oponents.union(view(state = ag.get_position(), vision = ag.connector.unit.get_vision_radio))
         return list(oponents)
 
     def _notify_formation_task(self, path: list[tuple]):
@@ -309,10 +309,12 @@ class MediumAgentFigth:
         self.id = id
         self.events = events
         self.agents = agents
-        self.oponents = oponents
-        self.strategie = FigthGame()
-        self.available = agents
+        self.oponents = oponents or []
+        self.alliads = []
+        self.strategie = GroupFigthGame()
+        self.available = agents.copy()
         self.map = map
+        self.team = list(agents)[0].connector.agent.id 
         self.my_events = { 'is_invalid': self._is_invalid, 'end_task': self._end_task, 'is_dead': self._is_dead}
         
     def asign_figters(self, available_agents, oponents):
@@ -324,7 +326,7 @@ class MediumAgentFigth:
         for ag in available_agents:
             nearest = math.inf
             for oponent in oponents:
-                actual = norma2(ag.get_position(), oponent)
+                actual = norma2(ag.get_position(), oponent.get_position())
                 if actual < nearest:
                     nearest = actual
                     best = oponent
@@ -332,10 +334,16 @@ class MediumAgentFigth:
         return result 
             
     def view(self, view):
-        oponents = set()
+        neighbors = set()
         for ag in self.agents:
-            oponents = oponents.union(view(ag.get_position(), 10)) 
-        self.oponents = list(oponents)
+            neighbors = neighbors.union(view(state = ag.get_position(),vision = ag.connector.unit.get_vision_radio) or []) 
+        self.oponents, self.alliads = self.split_neighbors(neighbors, self.oponents,self.alliads)
+    
+    def split_neighbors(self, neighbors, oponents, alliads):
+        oponents =list(filter(lambda x: x.is_connected() , set([self.map[i].unit for i in filter(lambda x: not self.map[x].is_empty and self.map[x].unit.agent.id != self.team, neighbors)]).union(oponents)))
+        alliads = [self.map[i].unit for i in filter(lambda x: self.map[x].unit.agent.id == self.team, neighbors)]
+
+        return oponents, alliads
 
     def _end_task(self, agent):
         self.available.add(agent)
@@ -351,49 +359,120 @@ class MediumAgentFigth:
         if not len(self.agents):
             self.events['dead_formation'](self.id)
     
-    def figth_in_formation(self):
-        #Se asignan las parejas de lucha segun distancia entre los enemigos y los conectores que estan sin hacer nada
-        recalc = self.asign_figters(self.available, self.oponents)
-        bussy = {} 
-        best_move = {}
-        attacks = []
-        wait = []
-        while recalc: #mientras que haya parajas a las que recalcularle el minimax
-            x, y = recalc.pop(0)
-            state = State(self.map, x.connector, self.map[y].unit, bussy.get(x.connector.id) or []) #se crea un estado que contemple el estado actual de la pareja
-            #en combate, el mapa y las ubicaciones en las que ya no tiene sentido que se paren
+    # def figth_in_formation(self):
+    #     #Se asignan las parejas de lucha segun distancia entre los enemigos y los conectores que estan sin hacer nada
+        
+    #     recalc = self.asign_figters(self.available, self.oponents)
+    #     bussy = {} 
+    #     best_move = {}
+    #     attacks = []
+    #     wait = []
+    #     while recalc: #mientras que haya parajas a las que recalcularle el minimax
+    #         x, y = recalc.pop(0)
+    #         state = State(self.map, x.connector, self.map[y].unit, bussy.get(x.connector.id) or []) #se crea un estado que contemple el estado actual de la pareja
+    #         #en combate, el mapa y las ubicaciones en las que ya no tiene sentido que se paren
             
-            value, action = h_alphabeta_search_solution(self.strategie, state, lambda x, y, z: z >= 3, self.strategie.heuristic)
+    #         value, action = h_alphabeta_search_solution(self.strategie, state, lambda x, y, z: z >= 3, self.strategie.heuristic)
             
-            if action[0] == "wait":
-                wait.append((x, action[1]))
-            elif action[0] == "move": #si la accion es un move entonces hay que ver si no confluyen variosmove a una misma casilla
-                bus =  bussy.get(x.connector.id) or []
-                bus.append(action[1])
-                bussy[x.connector.id] = bus
+    #         if action[0] == "wait":
+    #             wait.append((x, action[1]))
+    #         elif action[0] == "move": #si la accion es un move entonces hay que ver si no confluyen variosmove a una misma casilla
+    #             bus =  bussy.get(x.connector.id) or []
+    #             bus.append(action[1])
+    #             bussy[x.connector.id] = bus
 
-                move = best_move.get(action[1])
-                if move is not None: #en caso que varios se muevan al mismo lugar se coge el de resultado mas prometedor
-                    x0,y0,V = move
-                    if V < value:
-                        move = (x,y,value)
-                        recalc.append((x0,y0))
-                    elif V >= value:
-                        recalc.append((x,y))
-                else: move = (x,y,value)
-                best_move[action[1]] = move
-            elif action[0] == "attack":
-                attacks.append((x,action[1])) #si es un ataque siempre se puede ejecutar 
-        self.set_actions(best_move, attacks, wait)
+    #             move = best_move.get(action[1])
+    #             if move is not None: #en caso que varios se muevan al mismo lugar se coge el de resultado mas prometedor
+    #                 x0,y0,V = move
+    #                 if V < value:
+    #                     move = (x,y,value)
+    #                     recalc.append((x0,y0))
+    #                 elif V >= value:
+    #                     recalc.append((x,y))
+    #             else: move = (x,y,value)
+    #             best_move[action[1]] = move
+    #         elif action[0] == "attack":
+    #             attacks.append((x,action[1])) #si es un ataque siempre se puede ejecutar 
+    #     self.set_actions(best_move, attacks, wait)
+    #     self.eject_actions()
+    
+    def figth_in_formation(self):
+        bussy = {}
+        free = []
+        best_move = {}
+        gen_bussy = []
+        actions = []
+        attack = 0
+        alliadslen = len(self.alliads)
+        # for agent, y  in recalc:
+        # for agent in self.available:
+        while len(self.available):
+            agent = self.available.pop()
+            self.alliads.remove(agent.connector)
+
+            if agent.get_move_cost() == inf:
+                actions.append((agent,self.static_action(agent)))
+            else:
+
+                # state = State(self.map, agent.connector, y, bussy) #se crea un estado que contemple el estado actual de la pareja
+                # value, state = h_alphabeta_search_solution(self.strategie, state, lambda x, y, z: z >= 3, self.strategie.heuristic)
+                current_busy = []
+                current_busy+=bussy.get(agent.connector.id) or []
+                current_busy +=  gen_bussy
+                state = Group_State(self.map, agent.connector, self.alliads,self.oponents, attack,alliadslen, current_busy)
+                value, state = h_alphabeta_search_solution(self.strategie,state,lambda x, y, z: z >= 2,self.strategie.heuristic)
+                
+                if state is not None:
+                    action, pos = state
+                    if action == "attack":
+                        attack =+ agent.connector.unit.get_damage
+                        gen_bussy.append(agent.get_position())
+                        actions.append((agent,("attack", pos)))
+                    if action == "wait":
+                        
+                        gen_bussy.append(agent.get_position())
+                        actions.append((agent,("wait", pos)))
+                    if action== "move":
+                       
+                        bus =  bussy.get(agent.connector.id) or []
+                        bus.append(pos)
+                        bussy[agent.connector.id] = bus
+  
+                        move = best_move.get(pos)
+                        if move is not None: #en caso que varios se muevan al mismo lugar se coge el de resultado mas prometedor
+                            x, V = move
+                            if V < value:
+                                move = (agent,value)
+                                self.available.add(x)
+                                self.alliads.append(x.connector)
+                            elif V >= value:
+                                self.available.add(agent)
+                                self.alliads.append(agent.connector)
+
+                        else: move = (agent,value)
+                        best_move[pos] = move
+        for poss, (agent,_) in best_move.items():
+            actions.append((agent,("move", poss)))
+                          
+        self.set_actions(actions)
         self.eject_actions()
 
-    def set_actions(self, moves, attacks, wait):
-        for x , pos in attacks:
-            x.set_action_list([("attack", pos)], events = self.my_events, rithm= 1)
-        for pos, (x,_,_) in moves.items():
-            x.set_action_list([("move", pos)], events = self.my_events)
-        for x, pos in wait:
-            x.set_action_list([("wait", pos)], events = self.my_events, rithm= 1)
+    def static_action(self, agent):
+        best = infinity
+        pos = None
+        range = agent.connector.unit.get_attack_range
+        position = agent.get_position()
+        for enemy in self.oponents:
+            if norma_inf(position, enemy.get_position()) <= range and  enemy.get_health_points() < best:
+                best = enemy.get_health_points()
+                pos = enemy.get_position()
+        
+        return ("wait", position) if pos is None else ("attack", pos)
+
+    def set_actions(self, actions):
+        for x , (action, pos) in actions:
+            x.set_action_list([(action, pos)], events = self.my_events, rithm= 0)
+
               
     def eject_actions(self):
         for agent in self.agents:

@@ -40,11 +40,11 @@ class HighAgent:
             self.in_misison[id] = []
         self.def_explorer()
 
-    def decide(self, view):
+    def decide(self, view, filter1, filter2):
         for id, troop in list(self.troops.items()):
             if type(troop) is MediumAgentFigth:
                 continue
-            troop_view = troop.inform_view(view)
+            troop_view = troop.inform_view(lambda state, vision : view(state =state, vision = vision, filter = filter1))
             if len(troop_view) > 0:
                 self.set_figth(id, troop, troop_view)
         for id, move in self.in_misison.items():

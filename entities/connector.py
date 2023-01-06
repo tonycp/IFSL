@@ -83,9 +83,11 @@ class StateMannager:
         
         for agent in self.agents:
             problem = ViewProblem(self.roadmap)
-            filter = lambda x: not self.map[x.state].is_empty and self.map[x.state].unit.agent.id != agent.id
+            filter_enemy = lambda x: not self.map[x.state].is_empty and self.map[x.state].unit.agent.id != agent.id
+            filter_all = lambda x: not self.map[x.state].is_empty 
+
             adj = lambda x: expand(problem, x)
-            agent.decide(lambda state, vision: list(map(lambda x: x.state, breadth_first_search(NodeTree(state=state), filter, adj, None, vision))))
+            agent.decide(lambda state, vision, filter: list(map(lambda x: x.state, breadth_first_search(NodeTree(state=state), filter, adj, None, vision))), filter_enemy, filter_all)
             
         # Ejecutar las acciones
         log = self.__exec_actions()

@@ -39,7 +39,7 @@ class Fighter(Unit, metaclass=Singleton):
 class Archer(Unit, metaclass=Singleton):
 
     def __init__(self):
-        Unit.__init__(self,5,60,6,1000,2)
+        Unit.__init__(self,5,60,9,1000,2)
         
     @property
     def weakness(self, other):

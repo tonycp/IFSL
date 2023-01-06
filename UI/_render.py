@@ -48,7 +48,7 @@ class Render:
                     sys.exit()
             yield self.last_state.exec_round()  # new state
 
-    def start(self, time: int = 10000) -> None:
+    def start(self, time: int = 1000) -> None:
         """
         start se encarga de recorrer la simulación hasta el final después de que pygame haya iniciado
 
