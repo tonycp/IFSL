@@ -4,20 +4,12 @@ from itertools import chain
 from Agent.low_layer import BasicAgent
 from Agent.medium_layer import MediumAgentMove, MediumAgentFigth
 from IA.basicAlgorithms import RoadMap
+from IA._definitions import GlobalTime
 from entities.connector import StateMannager as S
 from IA.formations import Formation, OneFormation, TwoRowsFormation
 from random import shuffle
 
 from entities.utils import norma_inf
-
-class GlobalTime(object):
-    def __init__(self):
-        self.time = 0
-    
-    def tick(self):
-        self.time += 1
-
-
 class HighAgent:    
     percent_explorer = 0.25
     def __init__(self, map, roadmap: RoadMap, formations: dict[int, tuple[set, Formation]], base ,window_size = 15):
@@ -41,19 +33,27 @@ class HighAgent:
         self.def_explorer()
 
     def decide(self, view, filter1, filter2):
-        for id, troop in list(self.troops.items()):
+        if self.global_time.time % self.window_size == 0:
+            for id, (agents, formation) in self.formations.items():
+                troop = self.troops[id]
+                for i in range(min(troop.max_cost, self.window_size)):
+                    for agent in agents:
+                        self.ocupations[(agent.get_position(), i + self.global_time.time)] = agent
+
+        for id, troop in self.troops.items():
             if type(troop) is MediumAgentFigth:
                 continue
             troop_view = troop.inform_view(lambda state, vision : view(state =state, vision = vision, filter = filter1))
             if len(troop_view) > 0:
                 self.set_figth(id, troop, troop_view)
+
         for id, move in self.in_misison.items():
             poss, action = move[0] if len(move) else (None, None)
             if action == "fight":
                 if type(self.troops[id]) is not MediumAgentFigth:
                     agents = self.troops[id].agents
                     self.troops[id] = MediumAgentFigth(agents, None, self.map, self.low_events, self.ocupations, self.global_time, id)
-                self.troops[id].view(view)
+                self.troops[id].view(lambda state, vision : view(state =state, vision = vision, filter = filter2))
                 self.troops[id].figth_in_formation()
             elif action:
                 if type(self.troops[id]) is not MediumAgentMove:
@@ -67,6 +67,12 @@ class HighAgent:
                     self.troops[id].go_to_formation()
                 elif action == "explore":
                     self.troops[id].explore_in_formation(*poss)
+        
+        for id, troop in self.troops.items():
+            if len(self.in_misison[id]):
+                continue
+            troop.wait_positions()
+
         self.global_time.tick()
 
     def go_to_enemies(self, id, positions):
@@ -82,7 +88,7 @@ class HighAgent:
             if len(other_explorer):
                 exp_formation = TwoRowsFormation(len(other_explorer), self.base)
                 self.formations[-1] = (other_explorer, exp_formation)
-                self.troops[-1] = MediumAgentMove(self.window_size,other_explorer, exp_formation, self.roadmap, self.low_events, self.ocupations, -1)
+                self.troops[-1] = MediumAgentMove(self.window_size,other_explorer, exp_formation, self.roadmap, self.low_events, self.ocupations, self.global_time, -1)
                 self.in_misison[-1] = [(self.base, "go_to_formation"), (positions, "move_in_formation"), (positions, "fight")]
 
         for id in self.troops.keys():
@@ -164,11 +170,16 @@ class HighAgent:
                     self.formations[id] = agents, TwoRowsFormation(num_units, poss)
             self.troops[id] = MediumAgentMove(self.window_size,agents, self.formations[id][1], self.roadmap, self.low_events, self.ocupations, self.global_time, id)
             self.in_misison[id].insert(0, (poss, "go_to_formation"))
-    
+
     def _end_explore(self, poss, id):
         self.in_misison[id].append(poss, "explore")
 
     def set_figth(self, id, troop, enemy):
-        nearest = min(enemy, key=lambda x: norma_inf(x, self.troops[id].formation.poss))
-        self.in_misison[id] = [(nearest, "fight")]
-        self.go_to_enemies(id, nearest)
+        px, py = 0, 0
+        for x, y in enemy:
+            px += x
+            py += y
+        px //= len(enemy)
+        py //= len(enemy)
+        self.in_misison[id] = [((px, py), "fight")]
+        self.go_to_enemies(id, (px, py))

@@ -151,9 +151,12 @@ class MoveVoronoiProblem(Problem):
             return len(self.end_cost[s])
         return self.roadmap.get_road_cost(s, s1)
 
-
-
-
+class GlobalTime(object):
+    def __init__(self):
+        self.time = 0
+    
+    def tick(self):
+        self.time += 1
 
 class Node(object):
     "A Node in a search tree."
