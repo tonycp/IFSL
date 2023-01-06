@@ -1,12 +1,30 @@
 from itertools import chain
-from msilib import sequence
-from multiprocessing import parent_process
 from queue import PriorityQueue
 import random
 from ._definitions import *
 import entities.utils as util
 import numpy as np
-from math import ceil, floor, inf
+from math import floor, inf
+
+class FakeReservation:
+    def __init__(self, reservation, current_time, max_time) -> None:
+        self.fake_reservation = {}
+        self.reservation = reservation
+        self.current_time = current_time
+        self.max_time = max_time
+
+    def get(self, index):
+        x, y, t = index
+        time = self.current_time + t * self.max_time
+
+        for i in range(self.max_time):
+            value = self.reservation.get((x, y, time + i))
+            if value is not None:
+                return value
+        return self.fake_reservation.get(index)
+
+    def __set_item__(self, index, value):
+        self.fake_reservation[index] = value
 
 def hill_climbing(goals: list[tuple], cost, iter_count = 30):
     best_sol = goals.copy()
@@ -175,23 +193,21 @@ def add_edge(n, reservation_table: dict, rrastar_instance: RRAstar, w):
         current_node = NodeTree(state=state, parent=current_node, path_cost=current_node.path_cost + 1)
     return [current_node]
 
-def whcastar_search(goals: list[(tuple, tuple)], rrastar_list: list[RRAstar], roadmap, w: int):
-    reservation_table = {}
+def whcastar_search(connectors, goals: list[(tuple, tuple)], rrastar_list: list[RRAstar], roadmap, w: int, reservation_table):
+    reservation_table = {} if not reservation_table else reservation_table
 
     for i in range(len(goals)):
-        connector, target = goals[i]
-        start = connector.get_position()
+        start, target = goals[i]
         rrastar_list[i] = init_rrastar(start=start, target=target, roadmap=roadmap) if rrastar_list[i] is None else rrastar_list[i]
-        reservation_table[(start, 0)] = connector
+        reservation_table[(start, 0)] = connectors[i]
     paths = {}
     for i in range(len(goals)):
-        connector, target = goals[i]
-        start = connector.get_position()
+        start, target = goals[i]
         rrastar_instance = rrastar_list[i]
         path = start_whcastar_search(reservation_table=reservation_table, roadmap=roadmap, rrastar_instance=rrastar_instance, start=start, target=target, w=w)
-        paths[connector] = path
+        paths[connectors[i]] = path
         for cell in path:
-            reservation_table[cell] = connector
+            reservation_table[cell] = connectors[i]
     return paths
 
 def slice(start_poss, width, height, filter, is_empty):

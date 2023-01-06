@@ -8,7 +8,6 @@
 # import UI
 # from entities._units import Knight
 
-
 # # item = Fighter()
 # # agent = A.Agent(A.RandomMove_IA())
 # # state = SM(None, [(agent,[(item,(0,0)),(item,(0,1))])])
@@ -36,4 +35,8 @@
 # print("Finish")
 
 
-print([(1, *i) for i in [(1, 2), (2, 2)]])
+# print([(1, *i) for i in [(1, 2), (2, 2)]])
+
+temp = {"a":1,"b":2,"c":3}.values()
+print(temp)
+
