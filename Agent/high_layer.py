@@ -34,8 +34,9 @@ class HighAgent:
 
     def decide(self, view, filter1, filter2):
         if self.global_time.time % self.window_size == 0:
-            for id, (agents, formation) in self.formations.items():
+            for id, (agents, formation) in self.formations.items(): 
                 troop = self.troops[id]
+                if(type(troop) is MediumAgentFigth): continue
                 for i in range(min(troop.max_cost, self.window_size)):
                     for agent in agents:
                         self.ocupations[(agent.get_position(), i + self.global_time.time)] = agent
