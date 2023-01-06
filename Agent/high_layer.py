@@ -10,22 +10,33 @@ from random import shuffle
 
 from entities.utils import norma_inf
 
-class HighAgent:
+class GlobalTime(object):
+    def __init__(self):
+        self.time = 0
+    
+    def tick(self):
+        self.time += 1
+
+
+class HighAgent:    
     percent_explorer = 0.25
-    def __init__(self, map, roadmap: RoadMap, formations: dict[int, tuple[set, Formation]], base):
+    def __init__(self, map, roadmap: RoadMap, formations: dict[int, tuple[set, Formation]], base ,window_size = 15):
         self.map = map
+        self.window_size = window_size
         self.roadmap = roadmap
         self.formations = formations
         self.explorer = []
         self.troops = {}
         self.in_misison:dict[int, list]={}
+        self.global_time = GlobalTime()
+        self.ocupations = {}
         self.base = base
         self.exp_formation = None
         self.exp_agent_formation = None
         self.low_events = { "dead_formation": self._dead_formation, "dead_unit": self._dead_unit, "end_task": self._end_task }
 
         for id, (agents, formation) in self.formations.items():
-            self.troops[id] = MediumAgentMove(agents, formation, self.roadmap, self.low_events, id)
+            self.troops[id] = MediumAgentMove(self.window_size, agents, formation, self.roadmap, self.low_events, self.ocupations, self.global_time, id)
             self.in_misison[id] = []
         self.def_explorer()
 
@@ -41,14 +52,14 @@ class HighAgent:
             if action == "fight":
                 if type(self.troops[id]) is not MediumAgentFigth:
                     agents = self.troops[id].agents
-                    self.troops[id] = MediumAgentFigth(agents, None, self.map, self.low_events, id)
-                self.troops[id].view(lambda state, vision : view(state =state, vision = vision, filter = filter2))
+                    self.troops[id] = MediumAgentFigth(agents, None, self.map, self.low_events, self.ocupations, self.global_time, id)
+                self.troops[id].view(view)
                 self.troops[id].figth_in_formation()
             elif action:
                 if type(self.troops[id]) is not MediumAgentMove:
                     formation = self.formations[id][1]
                     agents = self.troops[id].agents
-                    self.troops[id] = MediumAgentMove(agents, formation, self.roadmap, self.low_events, id)
+                    self.troops[id] = MediumAgentMove(self.window_size,agents, formation, self.roadmap, self.low_events, self.ocupations, self.global_time, id)
 
                 if action == "move_in_formation":
                     self.troops[id].move_in_formation(poss)
@@ -56,6 +67,7 @@ class HighAgent:
                     self.troops[id].go_to_formation()
                 elif action == "explore":
                     self.troops[id].explore_in_formation(*poss)
+        self.global_time.tick()
 
     def go_to_enemies(self, id, positions):
         exp_formation = self.formations.get(-1)
@@ -70,7 +82,7 @@ class HighAgent:
             if len(other_explorer):
                 exp_formation = TwoRowsFormation(len(other_explorer), self.base)
                 self.formations[-1] = (other_explorer, exp_formation)
-                self.troops[-1] = MediumAgentMove(other_explorer, exp_formation, self.roadmap, self.low_events, -1)
+                self.troops[-1] = MediumAgentMove(self.window_size,other_explorer, exp_formation, self.roadmap, self.low_events, self.ocupations, -1)
                 self.in_misison[-1] = [(self.base, "go_to_formation"), (positions, "move_in_formation"), (positions, "fight")]
 
         for id in self.troops.keys():
@@ -150,7 +162,7 @@ class HighAgent:
                     self.formations[id] = agents, OneFormation(poss)
                 else:
                     self.formations[id] = agents, TwoRowsFormation(num_units, poss)
-            self.troops[id] = MediumAgentMove(agents, self.formations[id][1], self.roadmap, self.low_events, id)
+            self.troops[id] = MediumAgentMove(self.window_size,agents, self.formations[id][1], self.roadmap, self.low_events, self.ocupations, self.global_time, id)
             self.in_misison[id].insert(0, (poss, "go_to_formation"))
     
     def _end_explore(self, poss, id):

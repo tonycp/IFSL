@@ -5,10 +5,11 @@ from .low_layer import BasicAgent
 from IA._definitions import *
 from Agent.ia import *
 import numpy as np
-
+from math import ceil
 
 class MediumAgentMove:
-    def __init__(self, agents: set[BasicAgent], formation: Formation, roadmap: RoadMap, events: dict, id) -> None:
+    def __init__(self, window_size,agents: set[BasicAgent], formation: Formation, roadmap: RoadMap, events: dict, ocupations, global_time, id) -> None:
+        self.window_size = window_size
         self.id = id
         self.dirt: DIRECTIONS = formation.dir
         self.events = events
@@ -19,14 +20,18 @@ class MediumAgentMove:
         self.roadmap = roadmap
         self.agents = agents
         self.subgoals = 0
+        self.ocupations = ocupations
+        self.global_time = global_time
         self.positioned: bool = None
         self.all_goals: list[bool] = None
         self.rrastar_list: list[RRAstar] = None
         self.from_to: list[tuple[int, int]] = None
-        self.path: dict[BasicAgent, list[tuple[int, int]]] = None
+        self.all_path: dict[BasicAgent, list[tuple[int, int]]] = None
+        self.real_path = None 
         self.max_cost: int = max(map(lambda x: x.get_move_cost(), agents))
         self.time: int = self.max_cost
-        self.low_events: dict = { 'is_invalid': self._is_invalid, 'end_task': self._end_task, 'is_dead': self._is_dead}
+        self.low_events: dict = { 'is_invalid': self._is_invalid, 'end_task': self._end_task }
+        self.path_index = -1
 
     def go_to_formation(self, poss = None, dirt = None):
         if dirt is not None:
@@ -74,6 +79,7 @@ class MediumAgentMove:
             new_goal = True
             self.ia = RoadMapMove_IA()
         if poss is not None and self.ia.goal != poss:
+            self.path_index = 0
             self.ia.set_goal(self.formation.poss, poss, self.roadmap)
 
         self._in_formation(new_goal)
@@ -84,13 +90,16 @@ class MediumAgentMove:
             new_goal = True
             self.ia = SliceMapMove_IA()
         if area is not None and size is not None and self.ia.goal != (area, size):
+            self.path_index = 0
             self.ia.set_goal(self.formation.poss, (area, size), self.roadmap)
 
         self._in_formation(new_goal)
-    
+
     def _in_formation(self, new_goal):
         if not len(self.invalidate) and (new_goal or len(self.available) == len(self.agents)):
-            self.path = self.ia.get_move_for(self.formation.poss)
+            #self.path_index es el próximo indice a partir del cual tienes que volver a calcular
+            path = {}
+            self.get_real_formation_path(path, self.global_time % self.window_size, self.path_index, self.formados, self.window_size)
             if self.path:
                 self.available.clear()
                 self._notify_formation_task(self.path)
@@ -98,6 +107,135 @@ class MediumAgentMove:
         self._update_formation()
         self._notify_move()
 
+    def mark_ocupation(self, all_path, path, start_time, start_index = 0, window = np.infty):
+        count = 0
+        ori_x, ori_y = self.formation.poss
+        direc = [(next_x - ori_x, next_y - ori_y) for next_x, next_y in all_path[start_index:]]
+        for dx,dy in direc:
+            if(count * self.max_cost >= window):
+                return start_index + count, path
+
+            for i in range(self.max_cost):
+                for agent, x, y in [(x, *x.get_position()) for x in self.agents]:
+                    poss = (x + dx, y + dy, start_time + count * self.max_cost + i)
+                    if poss in self.ocupations or count * self.max_cost + i >= window:
+                        return start_index + count, path
+
+                for agent, x, y in [(x, *x.get_position()) for x in self.agents]:
+                    poss = (x + dx, y + dy, start_time + count * self.max_cost + i)
+                    self.ocupations.add(poss)
+                    path[agent].append(x, y, start_time + count * self.max_cost + i)
+            count += 1
+
+        return start_index + count, path
+
+    def check_in_ocupation(self, path, start_time, start_index, window):
+        count = 0
+        ori_x, ori_y = self.formation.poss
+        direc = [(next_x - ori_x, next_y - ori_y) for next_x, next_y in path]
+        for dx,dy in direc[start_index:]:
+
+            for i in range(self.max_cost):
+                for x,y in [x.get_position() for x in self.agents]:
+                    poss = (x + dx, y + dy, start_time + count * self.max_cost + i)
+                    if poss not in self.ocupations or count * self.max_cost + i >= window:
+                        return start_index + count
+            count += 1
+
+        return start_index + count
+    
+    def get_real_formation_path(self, path, time, index,formados, window):
+        current_time = time
+        last_valid_index = -1
+        if(formados):
+            while True:
+                last_valid_index = self.mark_ocupation(self.all_path, path, current_time, index, window - current_time)
+                current_time = time + self.max_cost * (last_valid_index - index + 1)
+                if current_time >= window:
+                    return
+
+                if last_valid_index != len(self.all_path):
+                    break
+
+                index = last_valid_index
+                new_path = self.ia.get_move_for(self.formation.poss, self.ocupations)
+                if new_path is None:
+                    return
+                self.all_path += new_path
+        else:
+            last_valid_index = index
+        
+        first_time = current_time
+        first_next_valid = 0
+        while True:
+            first_next_valid = self.check_in_ocupation(self.all_path, current_time, index, window - current_time)
+            current_time = time + self.max_cost * (first_next_valid - index + 1)
+
+            goal = self.all_path[first_next_valid]
+            if current_time >= window or first_next_valid != len(self.all_path):
+                break
+
+            index = first_next_valid
+            new_path = self.ia.get_move_for(self.formation.poss, self.ocupations)
+            if new_path is None:
+                break 
+            self.all_path += new_path
+        
+        fix_windows = current_time - first_time
+        formados = self.fix_path(path, goal, first_time, fix_windows)
+        if(path.values().__iter__().__next__()[-1][2] >= window):
+            return
+        if(formados):
+            self.get_real_formation_path(path,path.values().__iter__().__next__()[-1][2], first_next_valid, True, window)
+        else:
+            x_sum = 0
+            y_sum = 0
+            count = 0
+            for path_by_agent in path.values():
+                last_x, last_y = path_by_agent[-1]
+                x_sum += last_x
+                y_sum += last_y
+                count += 1
+            
+            cluster = (ceil(x_sum/count),ceil(y_sum/count))
+            next_index = 0
+            best_value = np.infty
+            for i in range(last_valid_index,first_next_valid + 1):
+                if(best_value > norma_inf(self.all_path[i],cluster)):
+                    next_index = i
+                    best_value = norma_inf(self.all_path[i],cluster)
+            self.get_real_formation_path(path,path.values().__iter__().__next__()[-1][2], next_index,False, window)
+
+    def fix_path(self, path, goal, first_time, fix_windows):
+        ori_x, ori_y = self.formation.poss
+        dx, dy = goal[0] - ori_x, goal[1] - ori_y
+        goals = list(zip(
+            [agent_path[-1] for agent_path in path.values()], 
+            [(x + dx, y + dy) for x, y in map(lambda x: x.get_position(), self.agents)]
+        ))
+
+        ids = [agent.connector for agent in self.agents]
+        path_for_agent = list(whcastar_search(ids, goals, self.roadmap, None, fix_windows / self.max_cost, FakeReservation(self.ocupations, first_time, self.max_cost)).items())
+
+        for j in range(len(path_for_agent[0][1])):
+            all_right = True
+            for i in range(len(path_for_agent)):
+                x, y = path_for_agent[i][0].get_position()
+                x, y = x + dx, y + dy
+                ax, ay = path_for_agent[i][1][j]
+
+                for k in range(self.max_cost):
+                    path[path_for_agent[i][0]].append((ax, ay, first_time + j * self.max_cost + k))
+                    self.ocupations.add((ax, ay, first_time + j * self.max_cost + k))
+
+                if ax != x or ay != y:
+                    all_right = False
+
+            if all_right:
+                return True
+        
+        return False
+        
     def get_info(self):
         return self.agents, self.formation
 
@@ -109,12 +247,12 @@ class MediumAgentMove:
 
     def _notify_formation_task(self, path: list[tuple]):
         x, y = self.formation.poss
-        dirts = [(next_x - x, next_y - y) for next_x, next_y in path]
+        direc = [(next_x - x, next_y - y) for next_x, next_y in path]
         for unit in self.agents:
             actions = []
             x, y = unit.get_position()
             prev_move = unit.get_position()
-            for dx, dy in dirts:
+            for dx, dy in direc:
                 move = (x + dx, y + dy)
                 if prev_move == move:
                     actions.append(("wait", move))
@@ -149,6 +287,10 @@ class MediumAgentMove:
         for unit in agents:
             unit.eject_action()
         self.invalidate.clear()
+
+    
+
+
 
     def _is_invalid(self, agent):
         self.invalidate.add(agent)
