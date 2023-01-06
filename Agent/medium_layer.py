@@ -328,7 +328,9 @@ class MediumAgentMove:
             self.events['dead_formation'](self.id)
 
 class MediumAgentFigth:
-    def __init__(self, agents, oponents, map, events: dict, ocupations, time, id):
+
+    def __init__(self, agents, oponents, map,  events: dict, ocuped_table, global_time, id):
+
         self.id = id
         self.events = events
         self.agents = agents
@@ -337,6 +339,8 @@ class MediumAgentFigth:
         self.strategie = GroupFigthGame()
         self.available = agents.copy()
         self.map = map
+        self.ocuped_table = ocuped_table
+        self.global_time = global_time
         self.team = list(agents)[0].connector.agent.id 
         self.my_events = { 'is_invalid': self._is_invalid, 'end_task': self._end_task, 'is_dead': self._is_dead}
         
@@ -419,7 +423,7 @@ class MediumAgentFigth:
     #     self.set_actions(best_move, attacks, wait)
     #     self.eject_actions()
     
-    def figth_in_formation(self, ocupation_table, current_time):
+    def figth_in_formation(self):
         bussy = {}
         free = []
         best_move = {}
@@ -442,7 +446,7 @@ class MediumAgentFigth:
                 current_busy = []
                 current_busy+=bussy.get(agent.connector.id) or []
                 current_busy +=  gen_bussy
-                state = Group_State(self.map, agent.connector, self.alliads,self.oponents, attack,alliadslen,current_time, current_busy, ocupation_table)
+                state = Group_State(self.map, agent.connector, self.alliads,self.oponents, attack,alliadslen,self.global_time.time, current_busy, self.ocuped_table)
                 value, state = h_alphabeta_search_solution(self.strategie,state,lambda x, y, z: z >= 2,self.strategie.heuristic)
                 
                 if state is not None:
@@ -451,10 +455,10 @@ class MediumAgentFigth:
                         attack =+ agent.connector.unit.get_damage
                         gen_bussy.append(agent.get_position())
                         for i in range(agent.get_move_cost() +1):
-                            ocupation_table[((agent.get_position()), current_time + i)] = agent
+                            self.ocuped_table[((agent.get_position()), self.global_time.time + i)] = agent
                         actions.append((agent,("attack", pos)))
                     if action == "wait":
-                        ocupation_table[((agent.get_position()), current_time)] = agent
+                        self.ocuped_table[((agent.get_position()), self.global_time.time)] = agent
                         gen_bussy.append(agent.get_position())
                         actions.append((agent,("wait", pos)))
                     if action== "move":
@@ -478,7 +482,7 @@ class MediumAgentFigth:
                         best_move[pos] = move
         for poss, (agent,_) in best_move.items():
             for i in range(agent.get_move_cost() +1):
-                ocupation_table[((poss), current_time + i)] = agent
+                self.ocuped_table[((poss), self.global_time.time + i)] = agent
                        
             actions.append((agent,("move", poss)))
                           
