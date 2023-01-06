@@ -14,7 +14,7 @@ class FakeReservation:
         self.max_time = max_time
 
     def get(self, index):
-        x, y, t = index
+        (x, y), t = index
         time = self.current_time + t * self.max_time
 
         for i in range(self.max_time):
@@ -23,7 +23,7 @@ class FakeReservation:
                 return value
         return self.fake_reservation.get(index)
 
-    def __set_item__(self, index, value):
+    def __setitem__(self, index, value):
         self.fake_reservation[index] = value
 
 def hill_climbing(goals: list[tuple], cost, iter_count = 30):
