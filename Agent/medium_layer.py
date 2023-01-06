@@ -427,9 +427,11 @@ class MediumAgentFigth:
                     if action == "attack":
                         attack =+ agent.connector.unit.get_damage
                         gen_bussy.append(agent.get_position())
+                        for i in range(agent.get_move_cost() +1):
+                            ocupation_table[((agent.get_position()), current_time + i)] = agent
                         actions.append((agent,("attack", pos)))
                     if action == "wait":
-                        
+                        ocupation_table[((agent.get_position()), current_time)] = agent
                         gen_bussy.append(agent.get_position())
                         actions.append((agent,("wait", pos)))
                     if action== "move":
@@ -452,6 +454,9 @@ class MediumAgentFigth:
                         else: move = (agent,value)
                         best_move[pos] = move
         for poss, (agent,_) in best_move.items():
+            for i in range(agent.get_move_cost() +1):
+                ocupation_table[((poss), current_time + i)] = agent
+                       
             actions.append((agent,("move", poss)))
                           
         self.set_actions(actions)
