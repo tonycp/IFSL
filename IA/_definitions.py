@@ -529,6 +529,7 @@ class FigthGame(Game):
             player1["pos"].pop()
         state.to_move = player1["id"]
                      
+                     
 class State:
     
     def __init__(self, map, connector1, connector2, bussy =None, **kwds):
@@ -557,13 +558,15 @@ class State:
 
 class Group_State:
 
-    def __init__(self, map, connector, alliads, enemies, attacks,alliadslen, bussy=None, **kwds):
+    def __init__(self, map, connector, alliads, enemies, attacks,alliadslen, current_time ,bussy=None, ocupation_table = None, **kwds):
         self.alliads_attacks = np.zeros(shape=len(alliads), dtype=int) 
         self.alliads_moves = np.zeros(shape=len(alliads), dtype=int) 
         self.enemies_attacks = np.zeros(shape=len(enemies), dtype=int) 
         self.attacks = attacks
         self.alliadslen = alliadslen
+        self.time = current_time
         self.enemies_pos_and_range =np.ndarray(shape=len(enemies), dtype=tuple) 
+        self.ocupation_table = ocupation_table
         acumulator= 0
         self.enemy_bussy = []
         for j in range(len(enemies)):
@@ -597,6 +600,7 @@ class Group_State:
                         self.alliads_moves[n] +=1
 
         self.p ={} 
+        self.p["id"] = connector.id
         self.p["attack"] = connector.unit.get_attack_range
         self.p["hp"] = [connector.get_health_points()]
         self.p["view"] = connector.unit.get_vision_radio
@@ -632,12 +636,12 @@ class GroupFigthGame(Game):
                 if norma_inf((x,y),(x2,y2)) <= player1["attack"] and h < hbest:
                     pbest = (x2,y2)
                     hbest =h 
-            if pbest:
+            if pbest and (depth >= 1 or not any ( [ state.ocupation_table.get(((x,y), state.time + i)) and state.ocupation_table.get(((x,y), state.time + i)).connector.id != state.p["id"]  for i in range(state.p["move"] +1 ) ] ) ) :
                 actions.append(("attack", pbest))
             for z in range(0,len(I_DIR)):
                 i = I_DIR[z]
                 j = J_DIR[z]
-                if(((x + i, y + j) not in state.bussy or depth >= 1)) and (x + i, y + j) not in state.enemy_bussy and validMove(x + i, y + j, state.map.shape[0], state.map.shape[1]):
+                if validMove(x + i, y + j, state.map.shape[0], state.map.shape[1]) and (((x + i, y + j) not in state.bussy and  not any ( [ state.ocupation_table.get(((x,y), state.time + i)) and state.ocupation_table.get(((x,y), state.time + i)).connector.id != state.p["id"]  for i in range(state.p["move"] +1 ) ] ) or depth >= 1)) and (x + i, y + j) not in state.enemy_bussy:
                     actions.append(("move", (x + i, y + j)))
             if not actions:
                 actions.append(("wait", (x, y)))
