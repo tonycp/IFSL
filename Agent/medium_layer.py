@@ -34,6 +34,7 @@ class MediumAgentMove:
         self.path_index = -1
 
     def go_to_formation(self, poss = None, dirt = None):
+        poss_from = self.formation.poss
         if dirt is not None:
             self.formation.rotate(dirt)
             self.dirt = dirt
@@ -41,38 +42,63 @@ class MediumAgentMove:
             self.formation.set_in(*poss)
 
         start_poss = [u for u in self.agents]
-        new_from_to = self.formation.asign_formation(start_poss)
-        
-        self.go_to_positions(new_from_to)
+        new_from_to =  self.formation.asign_formation(start_poss)
+        start_poss.clear()
+        go_to = []
+        for agent, poss in new_from_to:
+            start_poss.append(agent)
+            go_to.append((agent.get_position(), poss))
+        self.go_to_positions(poss_from, start_poss, go_to)
 
     def wait_positions(self):
-        self.go_to_positions(self.agents, [agent.get_position() for agent in self.agents])
+        self.go_to_positions(self.formation.poss, self.agents, [(agent.get_position(), agent.get_position()) for agent in self.agents])
 
-    def go_to_positions(self, from_to):
+    def go_to_positions(self, poss_from, agents, goals):
         new_goal = False
-        if self.from_to != from_to:
-            self.rrastar_list = np.ndarray(shape=(len(self.agents)), dtype=RRAstar)
+        if self.from_to != None:
+            for index, (before, after) in enumerate(zip(self.from_to, goals)):
+                if before != after:
+                    self.rrastar_list[index] = None
+                    new_goal = True
+        else:
+            self.rrastar_list = np.ndarray(shape=len(agents), dtype=RRAstar)
             new_goal = True
-        self.from_to = from_to
-        self.all_goals = list(map(lambda x: x[0].get_position() != x[1], self.from_to))
+        self.from_to = goals
+        self.all_goals = list(map(lambda x: x[0].get_position() != x[1], zip(agents, goals)))
         self.positioned = not any(self.all_goals)
+
+        ori_x, ori_y = self.formation.poss
+        x, y = poss_from
+        dx, dy = ori_x - x, ori_y - y
 
         if not len(self.invalidate) and (new_goal or len(self.available) == len(self.agents)):
             self.available.clear()
-            self.from_to, self.rrastar_list = MediumAgentMove.order(self.from_to, self.rrastar_list)
-            whcastar_search(ids, goals, rrastar, self.roadmap, fix_windows // self.max_cost, FakeReservation(self.ocupations, first_time, self.max_cost))
-            self.path = whcastar_search(goals = self.from_to, roadmap=self.roadmap, rrastar_list=self.rrastar_list, w=self.window_size//self.max_cost)
-            self._notify_task(self.path.items())
+            agents, goals, self.rrastar_list = MediumAgentMove.order(agents, goals, self.rrastar_list)
+            path = whcastar_search(agents, goals, self.rrastar_list, self.roadmap, self.window_size // self.max_cost, FakeReservation(self.ocupations, 0, self.max_cost))
+            path_list = list(path.items())
+
+            for j in range(1, len(path_list[0][1])):
+                for i in range(len(path_list)):
+                    x, y = path_list[i][0].get_position()
+                    x, y = x + dx, y + dy
+                    (ax, ay), _ = path_list[i][1][j]
+
+                    for k in range(self.max_cost):
+                        self.ocupations[((ax, ay), self.global_time.time + (j - 1) * self.max_cost + k)] = path_list[i][0]
+            for agent in self.agents:
+                path[agent].pop(0)
+            self._notify_task(path.items())
         self._notify_move()
 
-    def order(goals, rrastar_list):
-        newgoals, newarrastar_list = [], []
-        zip_goals = list(zip(goals, rrastar_list))
-        zip_goals.sort(key=lambda x: x[0][0].get_position() == x[0][1])
-        for goal, rrastar in zip_goals:
+    def order(agents, goals, rrastar_list):
+        newagents, newgoals, newarrastar_list = [], [], []
+        zip_goals = list(zip(agents, goals, rrastar_list))
+        zip_goals.sort(key=lambda x: x[0].get_position() == x[1])
+        for agent, goal, rrastar in zip_goals:
+            newagents.append(agent)
             newgoals.append(goal)
             newarrastar_list.append(rrastar)
-        return newgoals, newarrastar_list
+        return newagents, newgoals, newarrastar_list
 
     def move_in_formation(self, poss = None):
         new_goal = False
@@ -115,9 +141,6 @@ class MediumAgentMove:
         ori_x, ori_y = self.formation.poss
         direc = [(next_x - ori_x, next_y - ori_y) for next_x, next_y in all_path[start_index:]]
         for dx,dy in direc:
-            if(count * self.max_cost >= window + window * (self.global_time.time // window)):
-                return start_index + count
-
             for agent, x, y in [(x, *x.get_position()) for x in self.agents]:
                 for i in range(self.max_cost):
                     poss = ((x + dx, y + dy), start_time + count * self.max_cost + i)
@@ -166,7 +189,7 @@ class MediumAgentMove:
                     for i in range(window % self.max_cost):
                         for agent, agent_path in path.items():
                             poss, t = agent_path[-1]
-                            self.ocupations[(poss, t + 1)] = agent
+                            self.ocupations[(poss, t + self.max_cost + i)] = agent
                     self.formados = True
                     self.path_index = last_valid_index
                     return
@@ -175,7 +198,7 @@ class MediumAgentMove:
                     break
 
                 index = last_valid_index
-                new_poss = self.all_path[index - 1]
+                new_poss = self.all_path[-1]
                 new_path = self.ia.get_move_for(new_poss)
                 if new_path is None:
                     self.formados = True
@@ -210,7 +233,7 @@ class MediumAgentMove:
                 self.formados = formados
                 self.path_index = last_valid_index + 1
                 return
-            self.get_real_formation_path(path, path.values().__iter__().__next__()[-1][1], first_next_valid + 1, True, window)
+            self.get_real_formation_path(path, path.values().__iter__().__next__()[-1][1] + 1, first_next_valid + 1, True, window)
         else:
             x_sum = 0
             y_sum = 0
