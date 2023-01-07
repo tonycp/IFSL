@@ -34,7 +34,7 @@ class HighAgent:
                 if(type(troop) is MediumAgentFigth): continue
                 for i in range(min(troop.max_cost, self.window_size)):
                     for agent in agents:
-                        self.ocupations[(agent.get_position(), i + self.global_time.time + 1)] = agent
+                        self.ocupations[(agent.get_position(), i + self.global_time.time)] = agent
 
         if self.troops.get(1):
             a_agent = list(self.troops[1].agents)[0]
@@ -82,11 +82,11 @@ class HighAgent:
         self.global_time.tick()
 
     def go_to_enemies(self, id, positions):
-        for id, agent in self.troops.items():
-            mision = self.in_misison[id]
-            if (positions, "fight") not in mision:
-                self.in_misison[id].insert(0, (positions, "fight"))
-                self.in_misison[id].insert(0, (positions, "move_in_formation"))
+        for key, agent in self.troops.items():
+            mision = self.in_misison[key]
+            if key != id and (positions, "fight") not in mision:
+                self.in_misison[key].insert(0, (positions, "fight"))
+                self.in_misison[key].insert(0, (positions, "move_in_formation"))
                 self.clear_ocupate(agent)
 
     def def_explorer(self):
@@ -180,8 +180,18 @@ class HighAgent:
     def clear_ocupate(self, troop):
         for agent in troop.agents:
             if agent.get_move_cost() == inf: continue
+            out_index = -1
             for index, (_, poss) in enumerate(agent.action_list):
+                if index == len(agent.action_list) - 1:
+                    out_index = index
+                    break
+                # corr = agent.current_time if agent.current_time >= 0 else troop.max_cost
+                num = self.global_time.time + agent.connector.timer + (agent.rithm - agent.current_time) + (index + 1) * troop.max_cost
                 for time in range(troop.max_cost):
-                    num = self.global_time.time + agent.current_time + time + index * troop.max_cost
-                    if num % self.window_size == num:
-                        self.ocupations.pop((poss, num))
+                        self.ocupations.pop((poss, num + time))
+            if out_index != -1:
+                num = self.global_time.time + agent.connector.timer + (agent.rithm - agent.current_time) + (out_index + 1) * troop.max_cost
+                end = self.global_time.time + troop.max_cost - (self.global_time.time + 1) % troop.max_cost + out_index * troop.max_cost
+                windows = self.window_size + self.window_size * (self.global_time.time // self.window_size)
+                for i in range(windows - end):
+                        self.ocupations.pop((poss, num + i))

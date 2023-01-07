@@ -77,7 +77,7 @@ class BasicAgent:
                 
                 #si es wait esperar
                 elif self.prev[0] == "wait":
-                    self.current_time = 0 if self.connector.unit.get_move_cost == inf else -self.connector.unit.get_move_cost
+                    self.current_time = 0 if self.connector.unit.get_move_cost == inf else -self.connector.unit.get_move_cost + 1
             
             else: 
                 self.events['end_task'](self)

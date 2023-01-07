@@ -18,7 +18,7 @@ class FakeReservation:
         time = self.current_time + t * self.max_time
 
         for i in range(self.max_time):
-            value = self.reservation.get((x, y, time + i))
+            value = self.reservation.get(((x, y), time + i))
             if value is not None:
                 return value
         return self.fake_reservation.get(index)
