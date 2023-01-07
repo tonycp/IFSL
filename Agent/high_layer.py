@@ -1,3 +1,4 @@
+from math import inf
 from IA.formations import Formation, OneFormation, TwoRowsFormation
 from Agent.medium_layer import MediumAgentMove, MediumAgentFigth
 from IA.basicAlgorithms import RoadMap
@@ -33,7 +34,17 @@ class HighAgent:
                 if(type(troop) is MediumAgentFigth): continue
                 for i in range(min(troop.max_cost, self.window_size)):
                     for agent in agents:
-                        self.ocupations[(agent.get_position(), i + self.global_time.time)] = agent
+                        self.ocupations[(agent.get_position(), i + self.global_time.time + 1)] = agent
+
+        if self.troops.get(1):
+            a_agent = list(self.troops[1].agents)[0]
+            if a_agent.connector.agent.id == 1:
+                print(f"{a_agent.connector.id}, {a_agent.get_position()}, {a_agent.prev}, {a_agent.connector.timer}, {self.global_time.time}")
+
+        if self.troops.get(2):
+            a_agent = list(self.troops[2].agents)[0]
+            if a_agent.connector.agent.id == 1:
+                print(f"{a_agent.connector.id}, {a_agent.get_position()}, {a_agent.prev}, {a_agent.connector.timer}, {self.global_time.time}")
 
         for id, troop in list(self.troops.items()):
             if type(troop) is MediumAgentFigth:
@@ -71,22 +82,7 @@ class HighAgent:
         self.global_time.tick()
 
     def go_to_enemies(self, id, positions):
-        exp_formation = self.formations.get(-1)
-        if exp_formation is None and len(self.explorer):
-            other_explorer = set()
-            for key, _ in self.explorer:
-                if id == key: 
-                    continue
-                mision = self.in_misison.pop(key)
-                self.troops.pop(key)
-                other_explorer = other_explorer.union(self.formations[key][0])
-            if len(other_explorer):
-                exp_formation = TwoRowsFormation(len(other_explorer), self.base)
-                self.formations[-1] = (other_explorer, exp_formation)
-                self.troops[-1] = MediumAgentMove(self.window_size,other_explorer, exp_formation, self.roadmap, self.low_events, self.ocupations, self.global_time, -1)
-                self.in_misison[-1] = [(self.base, "go_to_formation"), (positions, "move_in_formation"), (positions, "fight")]
-
-        for id, agent in self.troops.values():
+        for id, agent in self.troops.items():
             mision = self.in_misison[id]
             if (positions, "fight") not in mision:
                 self.in_misison[id].insert(0, (positions, "fight"))
@@ -183,6 +179,9 @@ class HighAgent:
     
     def clear_ocupate(self, troop):
         for agent in troop.agents:
+            if agent.get_move_cost() == inf: continue
             for index, (_, poss) in enumerate(agent.action_list):
                 for time in range(troop.max_cost):
-                    self.ocupations.pop((poss, self.global_time.time + agent.current_time + time + index * troop.max_cost))
+                    num = self.global_time.time + agent.current_time + time + index * troop.max_cost
+                    if num % self.window_size == num:
+                        self.ocupations.pop((poss, num))

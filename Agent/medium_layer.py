@@ -133,7 +133,8 @@ class MediumAgentMove:
             if path:
                 self.available.clear()
                 self._notify_task(path.items())
-            return
+            else: 
+                return
         self._notify_move()
 
     def mark_ocupation(self, all_path, path, start_time, start_index = 0, window = np.infty):
@@ -141,18 +142,25 @@ class MediumAgentMove:
         ori_x, ori_y = self.formation.poss
         direc = [(next_x - ori_x, next_y - ori_y) for next_x, next_y in all_path[start_index:]]
         for dx,dy in direc:
+            end_windows = False
             for agent, x, y in [(x, *x.get_position()) for x in self.agents]:
                 for i in range(self.max_cost):
                     poss = ((x + dx, y + dy), start_time + count * self.max_cost + i)
-                    if poss in self.ocupations or start_time + count * self.max_cost + i >= window + window * (self.global_time.time // window):
+                    if poss in self.ocupations:
                         return start_index + count
+                    if start_time + count * self.max_cost + i >= window + window * (self.global_time.time // window):
+                        end_windows = True
 
             for agent, x, y in [(x, *x.get_position()) for x in self.agents]:
-                for i in range(self.max_cost):
-                    poss = ((x + dx, y + dy), start_time + count * self.max_cost + i)
-                    self.ocupations[poss] = agent
+                if not end_windows: 
+                    for i in range(self.max_cost):
+                        poss = ((x + dx, y + dy), start_time + count * self.max_cost + i)
+                        self.ocupations[poss] = agent
                 path[agent].append(((x + dx, y + dy), start_time + count * self.max_cost))
+
             count += 1
+            if end_windows:
+                return start_index + count
 
         return start_index + count
 
@@ -161,17 +169,26 @@ class MediumAgentMove:
         ori_x, ori_y = self.formation.poss
         direc = [(next_x - ori_x, next_y - ori_y) for next_x, next_y in path]
         for dx,dy in direc[start_index:]:
-
             ocupated = False
-            for x,y in [x.get_position() for x in self.agents]:
-                for i in range(self.max_cost):
+            end_windows = False
+            for i in range(self.max_cost):
+                if start_time + count * self.max_cost + i >= window + window * (self.global_time.time // window):
+                    end_windows = True
+                    break
+                for x,y in [x.get_position() for x in self.agents]:
                     poss = ((x + dx, y + dy), start_time + count * self.max_cost + i)
                     if self.ocupations.get(poss) is not None:
                         ocupated = True
-            if not ocupated or start_time + count * self.max_cost + i >= window + window * (self.global_time.time // window):
+                        break
+                if ocupated:
+                    break
+    
+            if end_windows:
+                return start_index + count + 1
+            if not ocupated:
                 return start_index + count
-            count += 1
 
+            count += 1
         return start_index + count
     
     def get_real_formation_path(self, path, time, index, formados, window):
@@ -189,15 +206,16 @@ class MediumAgentMove:
                     for i in range(window % self.max_cost):
                         for agent, agent_path in path.items():
                             poss, t = agent_path[-1]
-                            self.ocupations[(poss, t + self.max_cost + i)] = agent
+                            self.ocupations[(poss, t + i)] = agent
                     self.formados = True
                     self.path_index = last_valid_index
                     return
 
+                index = last_valid_index
+
                 if last_valid_index != len(self.all_path):
                     break
 
-                index = last_valid_index
                 new_poss = self.all_path[-1]
                 new_path = self.ia.get_move_for(new_poss)
                 if new_path is None:
@@ -208,11 +226,11 @@ class MediumAgentMove:
         else:
             last_valid_index = index
         
-        first_time = current_time
+        first_time = current_time - self.max_cost
         first_next_valid = 0
         while True:
-            first_next_valid = self.check_in_ocupation(self.all_path, current_time, index, window)
-            current_time = time + self.max_cost * (first_next_valid - index + 1)
+            first_next_valid = self.check_in_ocupation(self.all_path, current_time, index + 1, window)
+            current_time = current_time + self.max_cost * (first_next_valid - index)
 
             goal = self.all_path[first_next_valid]
             if current_time >= window + window * (self.global_time.time // window) or first_next_valid != len(self.all_path):
@@ -224,22 +242,22 @@ class MediumAgentMove:
                 break 
             self.all_path += new_path
         
-        fix_windows = min(current_time - first_time + 1 + self.max_cost, window)
+        fix_windows = min(current_time - first_time + 1, window)
 
-        start = [agent_path[-1][0] for agent_path in path.values] if len(path.values().__iter__().__next__()) else [agent.get_position() for agent in self.agents]
+        start = [agent_path[-1][0] for agent_path in path.values()] if len(path.values().__iter__().__next__()) else [agent.get_position() for agent in self.agents]
         formados = self.fix_path(path, start, goal, first_time, fix_windows)
         if(formados):
             if(path.values().__iter__().__next__()[-1][1] >= window + window * (self.global_time.time // window)):
                 self.formados = formados
                 self.path_index = last_valid_index + 1
                 return
-            self.get_real_formation_path(path, path.values().__iter__().__next__()[-1][1] + 1, first_next_valid + 1, True, window)
+            self.get_real_formation_path(path, path.values().__iter__().__next__()[-1][1] + self.max_cost, first_next_valid + 1, True, window)
         else:
             x_sum = 0
             y_sum = 0
             count = 0
             for path_by_agent in path.values():
-                last_x, last_y = path_by_agent[-1]
+                (last_x, last_y), _ = path_by_agent[-1]
                 x_sum += last_x
                 y_sum += last_y
                 count += 1
@@ -253,7 +271,7 @@ class MediumAgentMove:
                     next_index = i
                     best_value = norma_inf(self.all_path[i], cluster)
 
-            if(path.values().__iter__().__next__()[-1][2] >= window + window * (self.global_time.time // window)):
+            if(path.values().__iter__().__next__()[-1][1] >= window + window * (self.global_time.time // window)):
                 self.formados = formados
                 self.path_index = next_index
                 return
@@ -283,8 +301,8 @@ class MediumAgentMove:
                 (ax, ay), _ = path_for_agent[i][1][j]
 
                 for k in range(self.max_cost):
-                    path[path_for_agent[i][0]].append(((ax, ay), first_time + (j - 1) * self.max_cost + k))
                     self.ocupations[((ax, ay), first_time + (j - 1) * self.max_cost + k)] = path_for_agent[i][0]
+                path[path_for_agent[i][0]].append(((ax, ay), first_time + (j - 1) * self.max_cost))
 
                 if ax != x or ay != y:
                     all_right = False

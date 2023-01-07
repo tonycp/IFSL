@@ -765,14 +765,14 @@ def h_alphabeta_search_solution(game, state, cutoff, h):
         v, move = -infinity, None
         for a in game.actions(state, depth):
             v2, _ = min_value(game.result(state, a), alpha, beta, depth+1)
-            print(f"MAX: {player} hizo {a} con valor {v2}")
+            # print(f"MAX: {player} hizo {a} con valor {v2}")
             game.undo(a,state)
             if v2 > v:
                 v, move = v2, a
                 alpha = max(alpha, v)
             if v >= beta:
                 return v, move
-        print(f"el resultado de MAX fue: {player} hizo {move} con valor {v}")
+        # print(f"el resultado de MAX fue: {player} hizo {move} con valor {v}")
         return v, move
 
     def min_value(state, alpha, beta, depth):
@@ -783,14 +783,14 @@ def h_alphabeta_search_solution(game, state, cutoff, h):
         v, move = +infinity, None
         for a in game.actions(state,depth):
             v2, _ = max_value(game.result(state, a), alpha, beta, depth + 1)
-            print(f"MIN: {player} hizo {a} con valor {v2}")
+            # print(f"MIN: {player} hizo {a} con valor {v2}")
             game.undo(a,state)
             if v2 < v:
                 v, move = v2, a
                 beta = min(beta, v)
             if v <= alpha:
                 return v, move
-        print(f"el resultado de MIN fue: {player} hizo {move} con valor {v}")
+        # print(f"el resultado de MIN fue: {player} hizo {move} con valor {v}")
         return v, move
 
     return max_value(state, -infinity, +infinity, 0)
