@@ -1,15 +1,9 @@
-from cmath import inf
-from queue import Queue
-from itertools import chain
-from Agent.low_layer import BasicAgent
+from IA.formations import Formation, OneFormation, TwoRowsFormation
 from Agent.medium_layer import MediumAgentMove, MediumAgentFigth
 from IA.basicAlgorithms import RoadMap
 from IA._definitions import GlobalTime
-from entities.connector import StateMannager as S
-from IA.formations import Formation, OneFormation, TwoRowsFormation
 from random import shuffle
 
-from entities.utils import norma_inf
 class HighAgent:    
     percent_explorer = 0.25
     def __init__(self, map, roadmap: RoadMap, formations: dict[int, tuple[set, Formation]], base ,window_size = 15):
@@ -41,7 +35,7 @@ class HighAgent:
                     for agent in agents:
                         self.ocupations[(agent.get_position(), i + self.global_time.time)] = agent
 
-        for id, troop in self.troops.items():
+        for id, troop in list(self.troops.items()):
             if type(troop) is MediumAgentFigth:
                 continue
             troop_view = troop.inform_view(lambda state, vision : view(state =state, vision = vision, filter = filter1))
@@ -92,11 +86,12 @@ class HighAgent:
                 self.troops[-1] = MediumAgentMove(self.window_size,other_explorer, exp_formation, self.roadmap, self.low_events, self.ocupations, self.global_time, -1)
                 self.in_misison[-1] = [(self.base, "go_to_formation"), (positions, "move_in_formation"), (positions, "fight")]
 
-        for id in self.troops.keys():
+        for id, agent in self.troops.values():
             mision = self.in_misison[id]
             if (positions, "fight") not in mision:
                 self.in_misison[id].insert(0, (positions, "fight"))
                 self.in_misison[id].insert(0, (positions, "move_in_formation"))
+                self.clear_ocupate(agent)
 
     def def_explorer(self):
         bussy = set()
@@ -183,4 +178,11 @@ class HighAgent:
         px //= len(enemy)
         py //= len(enemy)
         self.in_misison[id] = [((px, py), "fight")]
+        self.clear_ocupate(troop)
         self.go_to_enemies(id, (px, py))
+    
+    def clear_ocupate(self, troop):
+        for agent in troop.agents:
+            for index, (_, poss) in enumerate(agent.action_list):
+                for time in range(troop.max_cost):
+                    self.ocupations.pop((poss, self.global_time.time + agent.current_time + time + index * troop.max_cost))

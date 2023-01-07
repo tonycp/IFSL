@@ -53,15 +53,14 @@ class BasicAgent:
         if(self.prev is not None and self.prev[0]=="move" and self.connector.state != STATES.Stand and self.connector.timer > 0):
             direction = dir_tuple[(self.prev[1][0] - self.connector.get_position()[0], self.prev[1][1] - self.connector.get_position()[1])]
             self.connector.notify_move(self.connector, direction)
-            return
         
         #se incrementa el contador de tiempo
-        if self.current_time < self.rithm: 
+        if self.current_time < self.rithm and self.connector.state == STATES.Stand:
             self.current_time += 1
             return
         
         #si se llego al tiempo marcado por el ritmo se cambia de accion
-        if  self.current_time == self.rithm:
+        if  self.current_time == self.rithm and self.connector.state == STATES.Stand:
             if self.action_list: 
 
                 self.prev = self.action_list.pop(0)
