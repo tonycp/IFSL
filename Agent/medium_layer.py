@@ -233,15 +233,17 @@ class MediumAgentMove:
             last_valid_index = index
         
         first_time = current_time - self.max_cost
-        first_next_valid = 0
+        first_next_valid = None
         goal_index = -1
         while True:
             first_next_valid = self.check_in_ocupation(self.all_path, current_time, index, window)
             # marca el tiempo que te demoras en recorrer los invalidos
             current_time = current_time + self.max_cost * (first_next_valid - index)
-
-            if current_time + (window - (self.global_time.time % window)) % self.max_cost >= window + window * (self.global_time.time // window):
-                current_time = window + window * (self.global_time.time // window)
+            window_end_real_time = window + window * (self.global_time.time // window)
+            window_actual_restante = window - (self.global_time.time % window)
+            window_incomplete  =  window_actual_restante % self.max_cost
+            if current_time + window_incomplete >= window_end_real_time:
+                current_time = window_end_real_time
                 # Siempre que puedes coges de goal la posicion en all_path despues de la ventana
                 if first_next_valid == len(self.all_path):
                     goal = self.all_path[first_next_valid - 1]
@@ -265,13 +267,13 @@ class MediumAgentMove:
                 break 
             self.all_path += new_path
         # window + window * (self.global_time.time // window) final de la ventana
-        fix_windows = min(current_time - first_time + 1, window + window * (self.global_time.time // window) - first_time)
+        fix_windows = min(current_time - first_time + 1,window_end_real_time - first_time)
         # fix_windows = current_time - first_time + 1
         
         start = [agent_path[-1][0] for agent_path in path.values()] if len(path.values().__iter__().__next__()) else [agent.get_position() for agent in self.agents]
         formados = self.fix_path(path, start, goal, first_time, fix_windows)
         if(formados):
-            if(path.values().__iter__().__next__()[-1][1] + (window - (self.global_time.time % window)) % self.max_cost >= window + window * (self.global_time.time // window)):
+            if path.values().__iter__().__next__()[-1][1] + window_incomplete >= window_end_real_time:
                 for i in range((window - (self.global_time.time % window)) % self.max_cost):
                     for agent, agent_path in path.items():
                         poss, t = agent_path[-1]
@@ -302,7 +304,7 @@ class MediumAgentMove:
                     next_index = i
                     best_value = norma_inf(self.all_path[i], cluster)
 
-            if(path.values().__iter__().__next__()[-1][1] + (window - (self.global_time.time % window)) % self.max_cost >= window + window * (self.global_time.time // window)):
+            if path.values().__iter__().__next__()[-1][1] + window_incomplete >= window_end_real_time:
                 self.formados = False
                 self.path_index = next_index + 1
                 return
