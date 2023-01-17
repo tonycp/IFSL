@@ -36,16 +36,6 @@ class HighAgent:
                     for agent in agents:
                         self.ocupations[(agent.get_position(), i + self.global_time.time)] = agent
 
-        if self.troops.get(1):
-            a_agent = list(self.troops[1].agents)[0]
-            if a_agent.connector.agent.id == 1:
-                print(f"{a_agent.connector.id}, {a_agent.get_position()}, {a_agent.prev}, {a_agent.connector.timer}, {self.global_time.time}")
-
-        if self.troops.get(2):
-            a_agent = list(self.troops[2].agents)[0]
-            if a_agent.connector.agent.id == 1:
-                print(f"{a_agent.connector.id}, {a_agent.get_position()}, {a_agent.prev}, {a_agent.connector.timer}, {self.global_time.time}")
-
         for id, troop in list(self.troops.items()):
             if type(troop) is MediumAgentFigth:
                 continue
